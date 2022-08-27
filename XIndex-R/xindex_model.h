@@ -35,18 +35,21 @@ class LinearModel {
   friend class Root;
 
  public:
-  void prepare(const std::vector<key_t> &keys,
-               const std::vector<size_t> &positions);
-  void prepare(const typename std::vector<key_t>::const_iterator &keys_begin,
+  void prepare(const std::vector<key_t>& keys,
+               const std::vector<size_t>& positions);
+  void prepare(const typename std::vector<key_t>::const_iterator& keys_begin,
                uint32_t size);
-  void prepare_model(const std::vector<double *> &model_key_ptrs,
-                     const std::vector<size_t> &positions);
-  size_t predict(const key_t &key) const;
-  size_t get_error_bound(const std::vector<key_t> &keys,
-                         const std::vector<size_t> &positions);
+  void prepare_model(const std::vector<double*>& model_key_ptrs,
+                     const std::vector<size_t>& positions);
+  size_t predict(const key_t& key) const;
+  size_t get_error_bound(const std::vector<key_t>& keys,
+                         const std::vector<size_t>& positions);
   size_t get_error_bound(
-      const typename std::vector<key_t>::const_iterator &keys_begin,
+      const typename std::vector<key_t>::const_iterator& keys_begin,
       uint32_t size);
+
+  /// computes the in memory size in bytes
+  static size_t byte_size() { return sizeof(LinearModel<key_t>); }
 
  private:
   std::array<double, key_t::model_key_size() + 1> weights;

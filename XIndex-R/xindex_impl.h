@@ -32,8 +32,8 @@
 namespace xindex {
 
 template <class key_t, class val_t, bool seq>
-XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t> &keys,
-                                  const std::vector<val_t> &vals,
+XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t>& keys,
+                                  const std::vector<val_t>& vals,
                                   size_t worker_num, size_t bg_n)
     : bg_num(bg_n) {
   config.worker_n = worker_num;
@@ -64,14 +64,14 @@ XIndex<key_t, val_t, seq>::~XIndex() {
 }
 
 template <class key_t, class val_t, bool seq>
-inline bool XIndex<key_t, val_t, seq>::get(const key_t &key, val_t &val,
+inline bool XIndex<key_t, val_t, seq>::get(const key_t& key, val_t& val,
                                            const uint32_t worker_id) {
   rcu_progress(worker_id);
   return root->get(key, val) == result_t::ok;
 }
 
 template <class key_t, class val_t, bool seq>
-inline bool XIndex<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
+inline bool XIndex<key_t, val_t, seq>::put(const key_t& key, const val_t& val,
                                            const uint32_t worker_id) {
   result_t res;
   rcu_progress(worker_id);
@@ -82,7 +82,7 @@ inline bool XIndex<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
 }
 
 template <class key_t, class val_t, bool seq>
-inline bool XIndex<key_t, val_t, seq>::remove(const key_t &key,
+inline bool XIndex<key_t, val_t, seq>::remove(const key_t& key,
                                               const uint32_t worker_id) {
   rcu_progress(worker_id);
   return root->remove(key) == result_t::ok;
@@ -90,24 +90,25 @@ inline bool XIndex<key_t, val_t, seq>::remove(const key_t &key,
 
 template <class key_t, class val_t, bool seq>
 inline size_t XIndex<key_t, val_t, seq>::scan(
-    const key_t &begin, const size_t n,
-    std::vector<std::pair<key_t, val_t>> &result, const uint32_t worker_id) {
+    const key_t& begin, const size_t n,
+    std::vector<std::pair<key_t, val_t>>& result, const uint32_t worker_id) {
   rcu_progress(worker_id);
   return root->scan(begin, n, result);
 }
 
 template <class key_t, class val_t, bool seq>
 size_t XIndex<key_t, val_t, seq>::range_scan(
-    const key_t &begin, const key_t &end,
-    std::vector<std::pair<key_t, val_t>> &result, const uint32_t worker_id) {
+    const key_t& begin, const key_t& end,
+    std::vector<std::pair<key_t, val_t>>& result, const uint32_t worker_id) {
   rcu_progress(worker_id);
   return root->range_scan(begin, end, result);
 }
 
 template <class key_t, class val_t, bool seq>
-void *XIndex<key_t, val_t, seq>::background(void *this_) {
-  volatile XIndex &index = *(XIndex *)this_;
-  if (index.bg_num == 0) return nullptr;
+void* XIndex<key_t, val_t, seq>::background(void* this_) {
+  volatile XIndex& index = *(XIndex*)this_;
+  if (index.bg_num == 0)
+    return nullptr;
 
   size_t bg_num = index.bg_num;
   std::vector<pthread_t> threads(bg_num);
@@ -164,7 +165,7 @@ void *XIndex<key_t, val_t, seq>::background(void *this_) {
     }
 
     if (should_update_array) {
-      root_t *old_root = index.root;
+      root_t* old_root = index.root;
       index.root = old_root->create_new_root();
       memory_fence();
       rcu_barrier();
@@ -196,7 +197,7 @@ void *XIndex<key_t, val_t, seq>::background(void *this_) {
 
   for (size_t bg_i = 0; bg_i < bg_num; bg_i++) {
     DEBUG_THIS("--- [bg] joining bg thread(" << bg_i << ")");
-    void *status;
+    void* status;
     int rc = pthread_join(threads[bg_i], &status);
     if (rc) {
       COUT_N_EXIT("Error: unable to join," << rc);
@@ -219,6 +220,19 @@ template <class key_t, class val_t, bool seq>
 void XIndex<key_t, val_t, seq>::terminate_bg() {
   config.exited = true;
   bg_running = false;
+}
+
+template <class key_t, class val_t, bool seq>
+size_t XIndex<key_t, val_t, seq>::byte_size() const {
+  // Metdata size like root pointer. This is not entirely accurate since the bg_master thread metadata is not fully accounted for.
+  // However, this constant overhead is insignificant compared to actual data size (accounted for below)
+  size_t total_size = sizeof(decltype(*this));
+
+  // recursively count size of nodes
+  if (root != nullptr)
+    total_size += root->byte_size();
+
+  return total_size;
 }
 
 }  // namespace xindex

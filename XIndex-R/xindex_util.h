@@ -53,7 +53,7 @@ enum class Result { ok, failed, retry };
 struct BGInfo {
   size_t bg_i;  // for calculation responsible range
   size_t bg_n;  // for calculation responsible range
-  volatile void *root_ptr;
+  volatile void* root_ptr;
   volatile bool should_update_array;
   std::atomic<bool> started;
   std::atomic<bool> finished;
@@ -129,10 +129,10 @@ struct AtomicVal {
   typedef val_t value_type;
   union ValUnion {
     val_t val;
-    AtomicVal *ptr;
+    AtomicVal* ptr;
     ValUnion() {}
     ValUnion(val_t val) : val(val) {}
-    ValUnion(AtomicVal *ptr) : ptr(ptr) {}
+    ValUnion(AtomicVal* ptr) : ptr(ptr) {}
   };
 
   // 60 bits for version
@@ -145,9 +145,14 @@ struct AtomicVal {
   // lock - removed - is_ptr
   volatile uint64_t status;
 
+  static size_t byte_size() {
+    // all values inlined
+    return sizeof(AtomicVal<val_t>);
+  }
+
   AtomicVal() : status(0) {}
   AtomicVal(val_t val) : val(val), status(0) {}
-  AtomicVal(AtomicVal *ptr) : val(ptr), status(0) { set_is_ptr(); }
+  AtomicVal(AtomicVal* ptr) : val(ptr), status(0) { set_is_ptr(); }
 
   bool is_ptr(uint64_t status) { return status & pointer_mask; }
   bool removed(uint64_t status) { return status & removed_mask; }
@@ -162,7 +167,7 @@ struct AtomicVal {
       uint64_t old = status;
       uint64_t expected = old & ~lock_mask;  // expect to be unlocked
       uint64_t desired = old | lock_mask;    // desire to lock
-      if (likely(cmpxchg((uint64_t *)&this->status, expected, desired) ==
+      if (likely(cmpxchg((uint64_t*)&this->status, expected, desired) ==
                  expected)) {
         return;
       }
@@ -176,7 +181,7 @@ struct AtomicVal {
     assert(get_version(status) == version + 1);
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const AtomicVal &leaf) {
+  friend std::ostream& operator<<(std::ostream& os, const AtomicVal& leaf) {
     COUT_VAR(leaf.val.val);
     COUT_VAR(leaf.val.ptr);
     COUT_VAR(leaf.is_ptr);
@@ -187,7 +192,7 @@ struct AtomicVal {
   }
 
   // semantics: atomically read the value and the `removed` flag
-  bool read(val_t &val) {
+  bool read(val_t& val) {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
@@ -213,7 +218,7 @@ struct AtomicVal {
       }
     }
   }
-  bool update(const val_t &val) {
+  bool update(const val_t& val) {
     lock();
     uint64_t status = this->status;
     bool res;
@@ -266,7 +271,7 @@ struct AtomicVal {
     memory_fence();
     unlock();
   }
-  bool read_ignoring_ptr(val_t &val) {
+  bool read_ignoring_ptr(val_t& val) {
     while (true) {
       uint64_t status = this->status;
       memory_fence();
@@ -284,7 +289,7 @@ struct AtomicVal {
       }
     }
   }
-  bool update_ignoring_ptr(const val_t &val) {
+  bool update_ignoring_ptr(const val_t& val) {
     lock();
     uint64_t status = this->status;
     bool res;

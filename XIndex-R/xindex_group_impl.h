@@ -35,16 +35,16 @@ Group<key_t, val_t, seq, max_model_n>::~Group() {}
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq, max_model_n>::init(
-    const typename std::vector<key_t>::const_iterator &keys_begin,
-    const typename std::vector<val_t>::const_iterator &vals_begin,
+    const typename std::vector<key_t>::const_iterator& keys_begin,
+    const typename std::vector<val_t>::const_iterator& vals_begin,
     uint32_t array_size) {
   init(keys_begin, vals_begin, 1, array_size);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq, max_model_n>::init(
-    const typename std::vector<key_t>::const_iterator &keys_begin,
-    const typename std::vector<val_t>::const_iterator &vals_begin,
+    const typename std::vector<key_t>::const_iterator& keys_begin,
+    const typename std::vector<val_t>::const_iterator& vals_begin,
     uint32_t model_n, uint32_t array_size) {
   assert(array_size > 0);
   this->pivot = *keys_begin;
@@ -67,13 +67,13 @@ void Group<key_t, val_t, seq, max_model_n>::init(
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-const key_t &Group<key_t, val_t, seq, max_model_n>::get_pivot() {
+const key_t& Group<key_t, val_t, seq, max_model_n>::get_pivot() {
   return pivot;
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t &key,
-                                                           val_t &val) {
+inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t& key,
+                                                           val_t& val) {
   if (get_from_array(key, val)) {
     return result_t::ok;
   }
@@ -88,7 +88,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::get(const key_t &key,
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::put(
-    const key_t &key, const val_t &val, const uint32_t worker_id) {
+    const key_t& key, const val_t& val, const uint32_t worker_id) {
 #ifdef DEBUGGING
   assert(is_first || key >= pivot);
 #endif
@@ -116,7 +116,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::put(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::remove(
-    const key_t &key) {
+    const key_t& key) {
   if (remove_from_array(key)) {
     return result_t::ok;
   }
@@ -131,16 +131,16 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::remove(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::scan(
-    const key_t &begin, const size_t n,
-    std::vector<std::pair<key_t, val_t>> &result) {
+    const key_t& begin, const size_t n,
+    std::vector<std::pair<key_t, val_t>>& result) {
   return buffer_temp ? scan_3_way(begin, n, key_t::max(), result)
                      : scan_2_way(begin, n, key_t::max(), result);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::range_scan(
-    const key_t &begin, const key_t &end,
-    std::vector<std::pair<key_t, val_t>> &result) {
+    const key_t& begin, const key_t& end,
+    std::vector<std::pair<key_t, val_t>>& result) {
   size_t old_size = result.size();
   if (buffer_temp) {
     scan_3_way(begin, std::numeric_limits<size_t>::max(), end, result);
@@ -191,15 +191,15 @@ double Group<key_t, val_t, seq, max_model_n>::mean_error_est() {
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-Group<key_t, val_t, seq, max_model_n>
-    *Group<key_t, val_t, seq, max_model_n>::split_model() {
+Group<key_t, val_t, seq, max_model_n>*
+Group<key_t, val_t, seq, max_model_n>::split_model() {
   if (seq) {  // disable seq seq
     disable_seq_insert_opt();
   }
 
   assert(model_n < max_model_n);
 
-  Group *new_group = new Group();
+  Group* new_group = new Group();
 
   new_group->pivot = pivot;
   new_group->array_size = array_size;
@@ -218,15 +218,15 @@ Group<key_t, val_t, seq, max_model_n>
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-Group<key_t, val_t, seq, max_model_n>
-    *Group<key_t, val_t, seq, max_model_n>::merge_model() {
+Group<key_t, val_t, seq, max_model_n>*
+Group<key_t, val_t, seq, max_model_n>::merge_model() {
   if (seq) {  // disable seq seq
     disable_seq_insert_opt();
   }
 
   assert(model_n > 1);
 
-  Group *new_group = new Group();
+  Group* new_group = new Group();
 
   new_group->pivot = pivot;
   new_group->array_size = array_size;
@@ -244,14 +244,14 @@ Group<key_t, val_t, seq, max_model_n>
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-Group<key_t, val_t, seq, max_model_n>
-    *Group<key_t, val_t, seq, max_model_n>::split_group_pt1() {
+Group<key_t, val_t, seq, max_model_n>*
+Group<key_t, val_t, seq, max_model_n>::split_group_pt1() {
   if (seq) {  // disable seq seq
     disable_seq_insert_opt();
   }
 
-  Group *new_group_1 = new Group();
-  Group *new_group_2 = new Group();
+  Group* new_group_1 = new Group();
+  Group* new_group_2 = new Group();
 
   new_group_1->pivot = pivot;
   new_group_2->pivot = data[array_size / 2].first;
@@ -284,12 +284,12 @@ Group<key_t, val_t, seq, max_model_n>
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-Group<key_t, val_t, seq, max_model_n>
-    *Group<key_t, val_t, seq, max_model_n>::split_group_pt2() {
+Group<key_t, val_t, seq, max_model_n>*
+Group<key_t, val_t, seq, max_model_n>::split_group_pt2() {
   // note that now this->data, this->buffer point to the old group's
   // and are shared with this->next
-  Group *new_group_1 = new Group();
-  Group *new_group_2 = new Group();
+  Group* new_group_1 = new Group();
+  Group* new_group_2 = new Group();
 
   new_group_1->pivot = pivot;
   new_group_2->pivot = this->next->pivot;
@@ -318,9 +318,9 @@ Group<key_t, val_t, seq, max_model_n>
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-Group<key_t, val_t, seq, max_model_n>
-    *Group<key_t, val_t, seq, max_model_n>::merge_group(
-        Group<key_t, val_t, seq, max_model_n> &next_group) {
+Group<key_t, val_t, seq, max_model_n>*
+Group<key_t, val_t, seq, max_model_n>::merge_group(
+    Group<key_t, val_t, seq, max_model_n>& next_group) {
   if (seq) {  // disable seq seq
     disable_seq_insert_opt();
     next_group.disable_seq_insert_opt();
@@ -333,7 +333,7 @@ Group<key_t, val_t, seq, max_model_n>
   buffer_temp = new buffer_t();
   next_group.buffer_temp = buffer_temp;
 
-  Group *new_group = new Group();
+  Group* new_group = new Group();
   new_group->model_n = model_n + next_group.model_n;
   if (new_group->model_n > max_model_n) {
     new_group->model_n = max_model_n;
@@ -357,8 +357,8 @@ Group<key_t, val_t, seq, max_model_n>
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-Group<key_t, val_t, seq, max_model_n>
-    *Group<key_t, val_t, seq, max_model_n>::compact_phase_1() {
+Group<key_t, val_t, seq, max_model_n>*
+Group<key_t, val_t, seq, max_model_n>::compact_phase_1() {
   if (seq) {  // disable seq seq
     disable_seq_insert_opt();
   }
@@ -369,7 +369,7 @@ Group<key_t, val_t, seq, max_model_n>
   buffer_temp = new buffer_t();
 
   // now merge sort into a new array and train models
-  Group *new_group = new Group();
+  Group* new_group = new Group();
 
   new_group->pivot = pivot;
   merge_refs(new_group->data, new_group->array_size, new_group->capacity);
@@ -409,7 +409,7 @@ void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::locate_model(
-    const key_t &key) {
+    const key_t& key) {
   assert(model_n >= 1);
 
   int model_i = 0;
@@ -424,7 +424,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::locate_model(
 // return true on success
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::get_from_array(
-    const key_t &key, val_t &val) {
+    const key_t& key, val_t& val) {
   size_t pos = get_pos_from_array(key);
   return pos != array_size &&         // position is valid (not out-of-range)
          data[pos].first == key &&    // key matches
@@ -433,7 +433,7 @@ inline bool Group<key_t, val_t, seq, max_model_n>::get_from_array(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
-    const key_t &key, const val_t &val, const uint32_t worker_id) {
+    const key_t& key, const val_t& val, const uint32_t worker_id) {
   if (seq) {
     seq_lock();
     size_t pos = get_pos_from_array(key);
@@ -451,9 +451,9 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
         }
 
         if ((int32_t)array_size == capacity) {
-          record_t *prev_data = nullptr;
+          record_t* prev_data = nullptr;
           capacity = array_size * seq_insert_reserve_factor;
-          record_t *new_data = new record_t[capacity]();
+          record_t* new_data = new record_t[capacity]();
           memcpy(new_data, data, array_size * sizeof(record_t));
           prev_data = data;
           data = new_data;
@@ -490,7 +490,7 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_array(
-    const key_t &key) {
+    const key_t& key) {
   size_t pos = get_pos_from_array(key);
   return pos != array_size &&        // position is valid (not out-of-range)
          data[pos].first == key &&   // key matches
@@ -499,7 +499,7 @@ inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_array(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::get_pos_from_array(
-    const key_t &key) {
+    const key_t& key) {
   size_t model_i = locate_model(key);
   size_t pos = models[model_i].model.predict(key);
   return exponential_search_key(key, pos);
@@ -507,7 +507,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::get_pos_from_array(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::binary_search_key(
-    const key_t &key, size_t pos, size_t search_begin, size_t search_end) {
+    const key_t& key, size_t pos, size_t search_begin, size_t search_end) {
   // search within the range
   if (unlikely(search_begin > array_size)) {
     search_begin = array_size;
@@ -534,15 +534,16 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::binary_search_key(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::exponential_search_key(
-    const key_t &key, size_t pos) const {
+    const key_t& key, size_t pos) const {
   return exponential_search_key(data, array_size, key, pos);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::exponential_search_key(
-    record_t *const data, uint32_t array_size, const key_t &key,
+    record_t* const data, uint32_t array_size, const key_t& key,
     size_t pos) const {
-  if (array_size == 0) return 0;
+  if (array_size == 0)
+    return 0;
   pos = (pos >= array_size ? (array_size - 1) : pos);
   assert(pos < array_size);
 
@@ -606,25 +607,25 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::exponential_search_key(
 // return true on success
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::get_from_buffer(
-    const key_t &key, val_t &val, buffer_t *buffer) {
+    const key_t& key, val_t& val, buffer_t* buffer) {
   return buffer->get(key, val);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::update_to_buffer(
-    const key_t &key, const val_t &val, buffer_t *buffer) {
+    const key_t& key, const val_t& val, buffer_t* buffer) {
   return buffer->update(key, val);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline void Group<key_t, val_t, seq, max_model_n>::insert_to_buffer(
-    const key_t &key, const val_t &val, buffer_t *buffer) {
+    const key_t& key, const val_t& val, buffer_t* buffer) {
   buffer->insert(key, val);
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline bool Group<key_t, val_t, seq, max_model_n>::remove_from_buffer(
-    const key_t &key, buffer_t *buffer) {
+    const key_t& key, buffer_t* buffer) {
   return buffer->remove(key);
 }
 
@@ -681,7 +682,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::seq_lock() {
   while (true) {
     uint8_t expected = 0;
     uint8_t desired = 1;
-    if (likely(cmpxchgb((uint8_t *)&lock, expected, desired) == expected)) {
+    if (likely(cmpxchgb((uint8_t*)&lock, expected, desired) == expected)) {
       return;
     }
   }
@@ -711,8 +712,8 @@ inline void Group<key_t, val_t, seq, max_model_n>::disable_seq_insert_opt() {
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline void Group<key_t, val_t, seq, max_model_n>::merge_refs(
-    record_t *&new_data, uint32_t &new_array_size,
-    int32_t &new_capacity) const {
+    record_t*& new_data, uint32_t& new_array_size,
+    int32_t& new_capacity) const {
   size_t est_size = array_size + buffer->size();
   new_capacity = est_size * seq_insert_reserve_factor;
   new_data = new record_t[new_capacity]();
@@ -722,9 +723,9 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_n_split(
-    record_t *&new_data_1, uint32_t &new_array_size_1, int32_t &new_capacity_1,
-    record_t *&new_data_2, uint32_t &new_array_size_2, int32_t &new_capacity_2,
-    const key_t &key) const {
+    record_t*& new_data_1, uint32_t& new_array_size_1, int32_t& new_capacity_1,
+    record_t*& new_data_2, uint32_t& new_array_size_2, int32_t& new_capacity_2,
+    const key_t& key) const {
   uint32_t intermediate_size;
   uint32_t est_size = array_size + buffer->size();
 
@@ -732,7 +733,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_n_split(
   new_capacity_1 =
       (int32_t)est_size > new_capacity_1 ? est_size : new_capacity_1;
 
-  record_t *intermediate = new record_t[new_capacity_1]();
+  record_t* intermediate = new record_t[new_capacity_1]();
   merge_refs_internal(intermediate, intermediate_size);
 
   uint32_t split_pos = exponential_search_key(intermediate, intermediate_size,
@@ -755,8 +756,8 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_n_split(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_with(
-    const Group &next_group, record_t *&new_data, uint32_t &new_array_size,
-    int32_t &new_capacity) const {
+    const Group& next_group, record_t*& new_data, uint32_t& new_array_size,
+    int32_t& new_capacity) const {
   size_t est_size = array_size + buffer->size() + next_group.array_size +
                     next_group.buffer->size();
   new_capacity = est_size * seq_insert_reserve_factor;
@@ -774,7 +775,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_with(
 // no workers should insert into buffer (frozen) now, so no lock needed
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
-    record_t *new_data, uint32_t &new_array_size) const {
+    record_t* new_data, uint32_t& new_array_size) const {
   size_t count = 0;
 
   auto buffer_source = typename buffer_t::RefSource(buffer);
@@ -783,10 +784,10 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
   buffer_source.advance_to_next_valid();
 
   while (array_source.has_next && buffer_source.has_next) {
-    const key_t &base_key = array_source.get_key();
-    wrapped_val_t &base_val = array_source.get_val();
-    const key_t &buf_key = buffer_source.get_key();
-    wrapped_val_t &buf_val = buffer_source.get_val();
+    const key_t& base_key = array_source.get_key();
+    wrapped_val_t& base_val = array_source.get_val();
+    const key_t& buf_key = buffer_source.get_key();
+    wrapped_val_t& buf_val = buffer_source.get_val();
 
     assert(base_key != buf_key);  // since update are inplaced
 
@@ -805,8 +806,8 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
   }
 
   while (array_source.has_next) {
-    const key_t &base_key = array_source.get_key();
-    wrapped_val_t &base_val = array_source.get_val();
+    const key_t& base_key = array_source.get_key();
+    wrapped_val_t& base_val = array_source.get_val();
 
     new_data[count].first = base_key;
     new_data[count].second = wrapped_val_t(&base_val);
@@ -817,8 +818,8 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
   }
 
   while (buffer_source.has_next) {
-    const key_t &buf_key = buffer_source.get_key();
-    wrapped_val_t &buf_val = buffer_source.get_val();
+    const key_t& buf_key = buffer_source.get_key();
+    wrapped_val_t& buf_val = buffer_source.get_val();
 
     new_data[count].first = buf_key;
     new_data[count].second = wrapped_val_t(&buf_val);
@@ -840,8 +841,8 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_internal(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
-    const key_t &begin, const size_t n, const key_t &end,
-    std::vector<std::pair<key_t, val_t>> &result) {
+    const key_t& begin, const size_t n, const key_t& end,
+    std::vector<std::pair<key_t, val_t>>& result) {
   size_t remaining = n;
   bool out_of_range = false;
   uint32_t base_i = get_pos_from_array(begin);
@@ -856,10 +857,10 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
   while (array_source.has_next && buffer_source.has_next && remaining &&
          !out_of_range) {
     // we are sure that these key has not-removed (pre-read) value
-    const key_t &base_key = array_source.get_key();
-    const val_t &base_val = array_source.get_val();
-    const key_t &buf_key = buffer_source.get_key();
-    const val_t &buf_val = buffer_source.get_val();
+    const key_t& base_key = array_source.get_key();
+    const val_t& base_val = array_source.get_val();
+    const key_t& buf_key = buffer_source.get_key();
+    const val_t& buf_val = buffer_source.get_val();
 
     assert(base_key != buf_key);  // since update are inplaced
 
@@ -883,8 +884,8 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
   }
 
   while (array_source.has_next && remaining && !out_of_range) {
-    const key_t &base_key = array_source.get_key();
-    const val_t &base_val = array_source.get_val();
+    const key_t& base_key = array_source.get_key();
+    const val_t& base_val = array_source.get_val();
     if (base_key >= end) {
       out_of_range = true;
       break;
@@ -895,8 +896,8 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
   }
 
   while (buffer_source.has_next && remaining && !out_of_range) {
-    const key_t &buf_key = buffer_source.get_key();
-    const val_t &buf_val = buffer_source.get_val();
+    const key_t& buf_key = buffer_source.get_key();
+    const val_t& buf_val = buffer_source.get_val();
     if (buf_key >= end) {
       out_of_range = true;
       break;
@@ -911,8 +912,8 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_2_way(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
-    const key_t &begin, const size_t n, const key_t &end,
-    std::vector<std::pair<key_t, val_t>> &result) {
+    const key_t& begin, const size_t n, const key_t& end,
+    std::vector<std::pair<key_t, val_t>>& result) {
   size_t remaining = n;
   bool out_of_range = false;
   uint32_t base_i = get_pos_from_array(begin);
@@ -930,12 +931,12 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
   while (array_source.has_next && buffer_source.has_next &&
          temp_buffer_source.has_next && remaining && !out_of_range) {
     // we are sure that these key has not-removed (pre-read) value
-    const key_t &base_key = array_source.get_key();
-    const val_t &base_val = array_source.get_val();
-    const key_t &buf_key = buffer_source.get_key();
-    const val_t &buf_val = buffer_source.get_val();
-    const key_t &tmp_buf_key = temp_buffer_source.get_key();
-    const val_t &tmp_buf_val = temp_buffer_source.get_val();
+    const key_t& base_key = array_source.get_key();
+    const val_t& base_val = array_source.get_val();
+    const key_t& buf_key = buffer_source.get_key();
+    const val_t& buf_val = buffer_source.get_val();
+    const key_t& tmp_buf_key = temp_buffer_source.get_key();
+    const val_t& tmp_buf_val = temp_buffer_source.get_val();
 
     assert(base_key != buf_key);      // since update are inplaced
     assert(base_key != tmp_buf_key);  // and removed values are skipped
@@ -970,10 +971,10 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
   while (array_source.has_next && buffer_source.has_next && remaining &&
          !out_of_range) {
     // we are sure that these key has not-removed (pre-read) value
-    const key_t &base_key = array_source.get_key();
-    const val_t &base_val = array_source.get_val();
-    const key_t &buf_key = buffer_source.get_key();
-    const val_t &buf_val = buffer_source.get_val();
+    const key_t& base_key = array_source.get_key();
+    const val_t& base_val = array_source.get_val();
+    const key_t& buf_key = buffer_source.get_key();
+    const val_t& buf_val = buffer_source.get_val();
 
     assert(base_key != buf_key);  // since update are inplaced
 
@@ -999,10 +1000,10 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
   while (buffer_source.has_next && temp_buffer_source.has_next && remaining &&
          !out_of_range) {
     // we are sure that these key has not-removed (pre-read) value
-    const key_t &buf_key = buffer_source.get_key();
-    const val_t &buf_val = buffer_source.get_val();
-    const key_t &tmp_buf_key = temp_buffer_source.get_key();
-    const val_t &tmp_buf_val = temp_buffer_source.get_val();
+    const key_t& buf_key = buffer_source.get_key();
+    const val_t& buf_val = buffer_source.get_val();
+    const key_t& tmp_buf_key = temp_buffer_source.get_key();
+    const val_t& tmp_buf_val = temp_buffer_source.get_val();
 
     assert(buf_key != tmp_buf_key);  // and removed values are skipped
 
@@ -1028,10 +1029,10 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
   while (array_source.has_next && temp_buffer_source.has_next && remaining &&
          !out_of_range) {
     // we are sure that these key has not-removed (pre-read) value
-    const key_t &base_key = array_source.get_key();
-    const val_t &base_val = array_source.get_val();
-    const key_t &tmp_buf_key = temp_buffer_source.get_key();
-    const val_t &tmp_buf_val = temp_buffer_source.get_val();
+    const key_t& base_key = array_source.get_key();
+    const val_t& base_val = array_source.get_val();
+    const key_t& tmp_buf_key = temp_buffer_source.get_key();
+    const val_t& tmp_buf_val = temp_buffer_source.get_val();
 
     assert(base_key != tmp_buf_key);  // and removed values are skipped
 
@@ -1056,8 +1057,8 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
 
   // 1-way trailings
   while (array_source.has_next && remaining && !out_of_range) {
-    const key_t &base_key = array_source.get_key();
-    const val_t &base_val = array_source.get_val();
+    const key_t& base_key = array_source.get_key();
+    const val_t& base_val = array_source.get_val();
     if (base_key >= end) {
       out_of_range = true;
       break;
@@ -1068,8 +1069,8 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
   }
 
   while (buffer_source.has_next && remaining && !out_of_range) {
-    const key_t &buf_key = buffer_source.get_key();
-    const val_t &buf_val = buffer_source.get_val();
+    const key_t& buf_key = buffer_source.get_key();
+    const val_t& buf_val = buffer_source.get_val();
     if (buf_key >= end) {
       out_of_range = true;
       break;
@@ -1080,8 +1081,8 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
   }
 
   while (temp_buffer_source.has_next && remaining && !out_of_range) {
-    const key_t &tmp_buf_key = temp_buffer_source.get_key();
-    const val_t &tmp_buf_val = temp_buffer_source.get_val();
+    const key_t& tmp_buf_key = temp_buffer_source.get_key();
+    const val_t& tmp_buf_val = temp_buffer_source.get_val();
     if (tmp_buf_key >= end) {
       out_of_range = true;
       break;
@@ -1096,7 +1097,7 @@ inline size_t Group<key_t, val_t, seq, max_model_n>::scan_3_way(
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::ArrayDataSource(
-    record_t *data, uint32_t array_size, uint32_t pos)
+    record_t* data, uint32_t array_size, uint32_t pos)
     : array_size(array_size), pos(pos), data(data) {}
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
@@ -1115,18 +1116,18 @@ void Group<key_t, val_t, seq,
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-const key_t &Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::get_key() {
+const key_t& Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::get_key() {
   return next_key;
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-const val_t &Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::get_val() {
+const val_t& Group<key_t, val_t, seq, max_model_n>::ArrayDataSource::get_val() {
   return next_val;
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>::ArrayRefSource::ArrayRefSource(
-    record_t *data, uint32_t array_size)
+    record_t* data, uint32_t array_size)
     : array_size(array_size), pos(0), data(data) {}
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
@@ -1147,14 +1148,37 @@ void Group<key_t, val_t, seq,
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-const key_t &Group<key_t, val_t, seq, max_model_n>::ArrayRefSource::get_key() {
+const key_t& Group<key_t, val_t, seq, max_model_n>::ArrayRefSource::get_key() {
   return next_key;
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-typename Group<key_t, val_t, seq, max_model_n>::atomic_val_t &
+typename Group<key_t, val_t, seq, max_model_n>::atomic_val_t&
 Group<key_t, val_t, seq, max_model_n>::ArrayRefSource::get_val() {
   return *next_val_ptr;
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+size_t Group<key_t, val_t, seq, max_model_n>::byte_size() const {
+  // purposefully exclude model size to make it explicit
+  const size_t metadata_size =
+      sizeof(decltype(*this)) - sizeof(decltype(models));
+
+  // correct for complex models, equivalent to sizeof(decltype(models)) otherwise
+  const size_t models_size = max_model_n * model_info_t::byte_size();
+
+  // data consists of records, which are key, value pairs. Since value is wrapped in a more complex fashion,
+  // it has a byte_size() to ensure we don't misscompute
+  const size_t data_size =
+      this->capacity * (sizeof(typename record_t::first_type) +
+                        record_t::second_type::byte_size());
+
+  const size_t delta_buffer_size = buffer != nullptr ? buffer->byte_size() : 0;
+  const size_t temp_buffer_size =
+      buffer_temp != nullptr ? buffer_temp->byte_size() : 0;
+
+  return metadata_size + models_size + data_size + delta_buffer_size +
+         temp_buffer_size;
 }
 
 }  // namespace xindex

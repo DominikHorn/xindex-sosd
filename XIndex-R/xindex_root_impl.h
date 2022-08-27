@@ -32,8 +32,8 @@ template <class key_t, class val_t, bool seq>
 Root<key_t, val_t, seq>::~Root() {}
 
 template <class key_t, class val_t, bool seq>
-void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
-                                   const std::vector<val_t> &vals) {
+void Root<key_t, val_t, seq>::init(const std::vector<key_t>& keys,
+                                   const std::vector<val_t>& vals) {
   INVARIANT(seq == false);
 
   // try different initial # of groups
@@ -96,7 +96,8 @@ void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
   }
 
   // max group_n is keys.size()
-  if (group_n_trial > keys.size()) group_n_trial = keys.size();
+  if (group_n_trial > keys.size())
+    group_n_trial = keys.size();
   calculate_err(keys, vals, group_n_trial, actual_error_at_percentile,
                 max_group_error, avg_group_error);
 
@@ -108,7 +109,7 @@ void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
 
   // use the found group_n_trial to initialize groups
   group_n = group_n_trial;
-  groups = std::make_unique<std::pair<key_t, group_t *volatile>[]>(group_n);
+  groups = std::make_unique<std::pair<key_t, group_t* volatile>[]>(group_n);
   size_t records_per_group = record_n / group_n;
   size_t trailing_record_n = record_n - records_per_group * group_n;
   size_t previous_end_i = 0;
@@ -144,11 +145,11 @@ void Root<key_t, val_t, seq>::init(const std::vector<key_t> &keys,
  * Root::calculate_err
  */
 template <class key_t, class val_t, bool seq>
-void Root<key_t, val_t, seq>::calculate_err(const std::vector<key_t> &keys,
-                                            const std::vector<val_t> &vals,
+void Root<key_t, val_t, seq>::calculate_err(const std::vector<key_t>& keys,
+                                            const std::vector<val_t>& vals,
                                             size_t group_n_trial,
-                                            double &err_at_percentile,
-                                            double &max_err, double &avg_err) {
+                                            double& err_at_percentile,
+                                            double& max_err, double& avg_err) {
   double access_percentage = 0.9;
   size_t record_n = keys.size();
   avg_err = 0;
@@ -190,7 +191,7 @@ void Root<key_t, val_t, seq>::calculate_err(const std::vector<key_t> &keys,
  * Root::get
  */
 template <class key_t, class val_t, bool seq>
-inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val) {
+inline result_t Root<key_t, val_t, seq>::get(const key_t& key, val_t& val) {
   return locate_group(key)->get(key, val);
 }
 
@@ -198,7 +199,7 @@ inline result_t Root<key_t, val_t, seq>::get(const key_t &key, val_t &val) {
  * Root::put
  */
 template <class key_t, class val_t, bool seq>
-inline result_t Root<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
+inline result_t Root<key_t, val_t, seq>::put(const key_t& key, const val_t& val,
                                              const uint32_t worker_id) {
   return locate_group(key)->put(key, val, worker_id);
 }
@@ -207,14 +208,14 @@ inline result_t Root<key_t, val_t, seq>::put(const key_t &key, const val_t &val,
  * Root::remove
  */
 template <class key_t, class val_t, bool seq>
-inline result_t Root<key_t, val_t, seq>::remove(const key_t &key) {
+inline result_t Root<key_t, val_t, seq>::remove(const key_t& key) {
   return locate_group(key)->remove(key);
 }
 
 template <class key_t, class val_t, bool seq>
 inline size_t Root<key_t, val_t, seq>::scan(
-    const key_t &begin, const size_t n,
-    std::vector<std::pair<key_t, val_t>> &result) {
+    const key_t& begin, const size_t n,
+    std::vector<std::pair<key_t, val_t>>& result) {
   size_t remaining = n;
   result.clear();
   result.reserve(n);
@@ -222,7 +223,7 @@ inline size_t Root<key_t, val_t, seq>::scan(
   key_t latest_group_pivot = key_t::min();  // for cross-slot chained groups
 
   int group_i;
-  group_t *group = locate_group_pt2(begin, locate_group_pt1(begin, group_i));
+  group_t* group = locate_group_pt2(begin, locate_group_pt1(begin, group_i));
   while (remaining && group_i < (int)group_n) {
     while (remaining && group &&
            group->get_pivot() > latest_group_pivot /* avoid re-entry */) {
@@ -242,19 +243,19 @@ inline size_t Root<key_t, val_t, seq>::scan(
 
 template <class key_t, class val_t, bool seq>
 inline size_t Root<key_t, val_t, seq>::range_scan(
-    const key_t &begin, const key_t &end,
-    std::vector<std::pair<key_t, val_t>> &result) {
+    const key_t& begin, const key_t& end,
+    std::vector<std::pair<key_t, val_t>>& result) {
   COUT_N_EXIT("not implemented yet");
 }
 
 template <class key_t, class val_t, bool seq>
-void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
-  volatile bool &should_update_array = ((BGInfo *)args)->should_update_array;
-  std::atomic<bool> &started = ((BGInfo *)args)->started;
-  std::atomic<bool> &finished = ((BGInfo *)args)->finished;
-  size_t bg_i = (((BGInfo *)args)->bg_i);
-  size_t bg_num = (((BGInfo *)args)->bg_n);
-  volatile bool &running = ((BGInfo *)args)->running;
+void* Root<key_t, val_t, seq>::do_adjustment(void* args) {
+  volatile bool& should_update_array = ((BGInfo*)args)->should_update_array;
+  std::atomic<bool>& started = ((BGInfo*)args)->started;
+  std::atomic<bool>& finished = ((BGInfo*)args)->finished;
+  size_t bg_i = (((BGInfo*)args)->bg_i);
+  size_t bg_num = (((BGInfo*)args)->bg_n);
+  volatile bool& running = ((BGInfo*)args)->running;
 
   while (running) {
     sleep(1);
@@ -262,7 +263,7 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
       started = false;
 
       // read the current root ptr and bg thread's responsible range
-      Root &root = **(Root * volatile *)(((BGInfo *)args)->root_ptr);
+      Root& root = **(Root* volatile*)(((BGInfo*)args)->root_ptr);
       size_t begin_group_i = bg_i * root.group_n / bg_num;
       size_t end_group_i = bg_i == bg_num - 1
                                ? root.group_n
@@ -276,7 +277,7 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
           DEBUG_THIS("----- [structure update] doing group_i=" << group_i);
         }
 
-        group_t *volatile *group = &(root.groups[group_i].second);
+        group_t* volatile* group = &(root.groups[group_i].second);
         while (*group != nullptr) {
           // check model split/merge
           bool should_split_group = false;
@@ -285,7 +286,7 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
           // set this to avoid ping-pong effect
           size_t max_trial_n = max_model_n;
           for (size_t trial_i = 0; trial_i < max_trial_n; ++trial_i) {
-            group_t *old_group = (*group);
+            group_t* old_group = (*group);
 
             double mean_error;
             if (seq) {
@@ -334,7 +335,7 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
           }
 
           // prepare for group merge
-          group_t *volatile *next_group = nullptr;
+          group_t* volatile* next_group = nullptr;
           if ((*group)->next) {
             next_group = &((*group)->next);
           } else if (group_i != end_group_i - 1 &&
@@ -346,16 +347,16 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
           size_t buffer_size = (*group)->buffer->size();
           buf_size += buffer_size;
           cnt++;
-          group_t *old_group = (*group);
+          group_t* old_group = (*group);
           if (should_split_group || buffer_size > config.buffer_size_bound) {
             // DEBUG_THIS("------ [group split] buf_size="
             //            << buffer_size << ", group_i=" << group_i);
 
-            group_t *intermediate = old_group->split_group_pt1();
+            group_t* intermediate = old_group->split_group_pt1();
             *group = intermediate;  // create 2 new groups with freezed buffer
             memory_fence();
             rcu_barrier();  // make sure no one is inserting to buffer
-            group_t *new_group = intermediate->split_group_pt2();  // now merge
+            group_t* new_group = intermediate->split_group_pt2();  // now merge
             *group = new_group;
             memory_fence();
             rcu_barrier();  // make sure no one is using old/intermedia groups
@@ -388,8 +389,8 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
             // DEBUG_THIS("------ [group merge] buf_size="
             //            << buffer_size << ", group_i=" << group_i);
 
-            group_t *old_next = (*next_group);
-            group_t *new_group = old_group->merge_group(*old_next);
+            group_t* old_next = (*next_group);
+            group_t* new_group = old_group->merge_group(*old_next);
             *group = new_group;
             *next_group = new_group;  // first set 2 ptrs to a valid one
             memory_fence();  // make sure that no one is accessing old groups
@@ -410,7 +411,7 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
             // DEBUG_THIS("------ [compaction], buf_size="
             //            << buffer_size << ", group_i=" << group_i);
 
-            group_t *new_group = old_group->compact_phase_1();
+            group_t* new_group = old_group->compact_phase_1();
             *group = new_group;
             memory_fence();
             rcu_barrier();
@@ -444,12 +445,12 @@ void *Root<key_t, val_t, seq>::do_adjustment(void *args) {
 }
 
 template <class key_t, class val_t, bool seq>
-Root<key_t, val_t, seq> *Root<key_t, val_t, seq>::create_new_root() {
-  Root *new_root = new Root();
+Root<key_t, val_t, seq>* Root<key_t, val_t, seq>::create_new_root() {
+  Root* new_root = new Root();
 
   size_t new_group_n = 0;
   for (size_t group_i = 0; group_i < group_n; group_i++) {
-    group_t *group = groups[group_i].second;
+    group_t* group = groups[group_i].second;
     while (group != nullptr) {
       new_group_n++;
       group = group->next;
@@ -459,12 +460,12 @@ Root<key_t, val_t, seq> *Root<key_t, val_t, seq>::create_new_root() {
   DEBUG_THIS("--- [root] update root array. old_group_n="
              << group_n << ", new_group_n=" << new_group_n);
   new_root->group_n = new_group_n;
-  new_root->groups = std::make_unique<std::pair<key_t, group_t *volatile>[]>(
+  new_root->groups = std::make_unique<std::pair<key_t, group_t* volatile>[]>(
       new_root->group_n);
 
   size_t new_group_i = 0;
   for (size_t group_i = 0; group_i < group_n; group_i++) {
-    group_t *group = groups[group_i].second;
+    group_t* group = groups[group_i].second;
     while (group != nullptr) {
       new_root->groups[new_group_i].first = group->get_pivot();
       new_root->groups[new_group_i].second = group;
@@ -489,7 +490,7 @@ Root<key_t, val_t, seq> *Root<key_t, val_t, seq>::create_new_root() {
 template <class key_t, class val_t, bool seq>
 void Root<key_t, val_t, seq>::trim_root() {
   for (size_t group_i = 0; group_i < group_n; group_i++) {
-    group_t *group = groups[group_i].second;
+    group_t* group = groups[group_i].second;
     if (group_i != group_n - 1) {
       assert(group->next ? group->next == groups[group_i + 1].second : true);
     }
@@ -591,8 +592,8 @@ inline void Root<key_t, val_t, seq>::train_rmi(size_t rmi_2nd_stage_model_n) {
   }
 
   for (size_t model_i = 0; model_i < rmi_2nd_stage_model_n; ++model_i) {
-    std::vector<key_t> &keys = keys_dispatched[model_i];
-    std::vector<size_t> &positions = positions_dispatched[model_i];
+    std::vector<key_t>& keys = keys_dispatched[model_i];
+    std::vector<size_t>& positions = positions_dispatched[model_i];
     rmi_2nd_stage[model_i].prepare(keys, positions);
   }
 }
@@ -610,7 +611,7 @@ size_t Root<key_t, val_t, seq>::pick_next_stage_model(size_t group_i_pred) {
 }
 
 template <class key_t, class val_t, bool seq>
-inline size_t Root<key_t, val_t, seq>::predict(const key_t &key) {
+inline size_t Root<key_t, val_t, seq>::predict(const key_t& key) {
   size_t pos_pred = rmi_1st_stage.predict(key);
   size_t next_stage_model_i = pick_next_stage_model(pos_pred);
   return rmi_2nd_stage[next_stage_model_i].predict(key);
@@ -620,16 +621,16 @@ inline size_t Root<key_t, val_t, seq>::predict(const key_t &key) {
  * Root::locate_group
  */
 template <class key_t, class val_t, bool seq>
-inline typename Root<key_t, val_t, seq>::group_t *
-Root<key_t, val_t, seq>::locate_group(const key_t &key) {
+inline typename Root<key_t, val_t, seq>::group_t*
+Root<key_t, val_t, seq>::locate_group(const key_t& key) {
   int group_i;  // unused
-  group_t *head = locate_group_pt1(key, group_i);
+  group_t* head = locate_group_pt1(key, group_i);
   return locate_group_pt2(key, head);
 }
 
 template <class key_t, class val_t, bool seq>
-inline typename Root<key_t, val_t, seq>::group_t *
-Root<key_t, val_t, seq>::locate_group_pt1(const key_t &key, int &group_i) {
+inline typename Root<key_t, val_t, seq>::group_t*
+Root<key_t, val_t, seq>::locate_group_pt1(const key_t& key, int& group_i) {
   group_i = predict(key);
   group_i = group_i > (int)group_n - 1 ? group_n - 1 : group_i;
   group_i = group_i < 0 ? 0 : group_i;
@@ -679,7 +680,7 @@ Root<key_t, val_t, seq>::locate_group_pt1(const key_t &key, int &group_i) {
   // the result falls in [-1, group_n - 1]
   // now we ensure the pointer is not null
   group_i = end_group_i < 0 ? 0 : end_group_i;
-  group_t *group = groups[group_i].second;
+  group_t* group = groups[group_i].second;
   while (group_i > 0 && group == nullptr) {
     group_i--;
     group = groups[group_i].second;
@@ -694,10 +695,10 @@ Root<key_t, val_t, seq>::locate_group_pt1(const key_t &key, int &group_i) {
 }
 
 template <class key_t, class val_t, bool seq>
-inline typename Root<key_t, val_t, seq>::group_t *
-Root<key_t, val_t, seq>::locate_group_pt2(const key_t &key, group_t *begin) {
-  group_t *group = begin;
-  group_t *next = group->next;
+inline typename Root<key_t, val_t, seq>::group_t*
+Root<key_t, val_t, seq>::locate_group_pt2(const key_t& key, group_t* begin) {
+  group_t* group = begin;
+  group_t* next = group->next;
   while (next != nullptr && next->get_pivot() <= key) {
     group = next;
     next = group->next;
@@ -706,6 +707,33 @@ Root<key_t, val_t, seq>::locate_group_pt2(const key_t &key, group_t *begin) {
   assert(group->is_first || key >= group->pivot);
 #endif
   return group;
+}
+
+template <class key_t, class val_t, bool seq>
+size_t Root<key_t, val_t, seq>::byte_size() const {
+  // statically counting byte size in this way relies on some assuptions
+  static_assert(
+      !std::is_same<decltype(rmi_1st_stage),
+                    std::remove_pointer<decltype(rmi_2nd_stage)>>::value,
+      "missmatching model types in root break static size computation");
+  using model_t = decltype(rmi_1st_stage);
+
+  const size_t metadata_size =
+      sizeof(decltype(*this)) + group_n * sizeof(group_pair_t);
+
+  // 1st stage rmi inlined into root struct and accounted for in metadata_size
+  const size_t root_model_size = rmi_2nd_stage_model_n * model_t::byte_size();
+
+  assert(groups != nullptr);
+
+  size_t group_size_total = 0;
+  for (size_t i = 0; i < group_n; i++) {
+    const auto& group_pair = groups.get()[i];
+    if (group_pair.second != nullptr)
+      group_size_total += group_pair.second->byte_size();
+  }
+
+  return metadata_size + root_model_size + group_size_total;
 }
 
 }  // namespace xindex

@@ -48,12 +48,15 @@ class AltBtreeBuffer {
     void lock();
     void unlock();
     bool is_full() { return key_n == node_capacity; };
-    int find_first_larger_than(const key_t &key);
-    int find_first_larger_than_or_equal_to(const key_t &key);
+    int find_first_larger_than(const key_t& key);
+    int find_first_larger_than_or_equal_to(const key_t& key);
     void move_keys_backward(int begin, int end, int off);
     void move_keys_backward(int begin, int off);
-    void copy_keys(int begin, int end, key_t *dst);
-    void copy_keys(int begin, key_t *dst);
+    void copy_keys(int begin, int end, key_t* dst);
+    void copy_keys(int begin, key_t* dst);
+
+    /// computes the in memory size in bytes
+    virtual size_t byte_size() const = 0;
 
    public:
     bool is_leaf;
@@ -61,7 +64,7 @@ class AltBtreeBuffer {
     uint8_t key_n;
     volatile uint64_t version = 0;
     key_t keys[node_capacity];
-    Internal *volatile parent = nullptr;
+    Internal* volatile parent = nullptr;
   };
 
   class Internal : public Node {
@@ -74,14 +77,17 @@ class AltBtreeBuffer {
     using Node::version;
 
    public:
-    Node *find_child(const key_t &key);
+    Node* find_child(const key_t& key);
     void move_children_backward(int begin, int end, int off);
     void move_children_backward(int begin, int off);
-    void copy_children(int begin, int end, Node **dst);
-    void copy_children(int begin, Node **dst);
+    void copy_children(int begin, int end, Node** dst);
+    void copy_children(int begin, Node** dst);
+
+    /// computes the in memory size in bytes
+    virtual size_t byte_size() const;
 
    public:
-    Node *children[alt_buf_fanout];
+    Node* children[alt_buf_fanout];
   };
 
   class Leaf : public Node {
@@ -96,21 +102,24 @@ class AltBtreeBuffer {
    public:
     void move_vals_backward(int begin, int end, int off);
     void move_vals_backward(int begin, int off);
-    void copy_vals(int begin, int end, atomic_val_t *dst);
-    void copy_vals(int begin, atomic_val_t *dst);
+    void copy_vals(int begin, int end, atomic_val_t* dst);
+    void copy_vals(int begin, atomic_val_t* dst);
+
+    /// computes the in memory size in bytes
+    virtual size_t byte_size() const;
 
    public:
     atomic_val_t vals[node_capacity];
-    Leaf *next;
+    Leaf* next;
   };
 
   struct DataSource {
-    DataSource(key_t begin, AltBtreeBuffer *buffer);
+    DataSource(key_t begin, AltBtreeBuffer* buffer);
     void advance_to_next_valid();
-    const key_t &get_key();
-    const val_t &get_val();
+    const key_t& get_key();
+    const val_t& get_val();
 
-    leaf_t *next = nullptr;
+    leaf_t* next = nullptr;
     bool has_next = false;
     int pos = 0, n = 0;
     key_t keys[node_capacity];
@@ -120,52 +129,55 @@ class AltBtreeBuffer {
   struct RefSource {
     typedef AtomicVal<val_t> atomic_val_t;
 
-    RefSource(AltBtreeBuffer *buffer);
+    RefSource(AltBtreeBuffer* buffer);
     void advance_to_next_valid();
-    const key_t &get_key();
-    atomic_val_t &get_val();
+    const key_t& get_key();
+    atomic_val_t& get_val();
 
-    leaf_t *next = nullptr;
+    leaf_t* next = nullptr;
     bool has_next = false;
     int pos = -1, n = 0;
     key_t keys[node_capacity];
-    atomic_val_t *val_ptrs[node_capacity];
+    atomic_val_t* val_ptrs[node_capacity];
   };
 
  public:
   AltBtreeBuffer();
   ~AltBtreeBuffer();
 
-  inline bool get(const key_t &key, val_t &val);
-  inline bool update(const key_t &key, const val_t &val);
-  inline void insert(const key_t &key, const val_t &val);
-  inline bool remove(const key_t &key);
-  inline size_t scan(const key_t &key_begin, const size_t n,
-                     std::vector<std::pair<key_t, val_t>> &result);
-  inline void range_scan(const key_t &key_begin, const key_t &key_end,
-                         std::vector<std::pair<key_t, val_t>> &result);
+  inline bool get(const key_t& key, val_t& val);
+  inline bool update(const key_t& key, const val_t& val);
+  inline void insert(const key_t& key, const val_t& val);
+  inline bool remove(const key_t& key);
+  inline size_t scan(const key_t& key_begin, const size_t n,
+                     std::vector<std::pair<key_t, val_t>>& result);
+  inline void range_scan(const key_t& key_begin, const key_t& key_end,
+                         std::vector<std::pair<key_t, val_t>>& result);
 
   inline uint32_t size();
 
- private:
-  leaf_t *locate_leaf(key_t key, uint64_t &version);
-  leaf_t *locate_leaf_locked(key_t key);
+  /// computes the in memory size in bytes
+  size_t byte_size() const;
 
-  void insert_leaf(const key_t &key, const val_t &val, leaf_t *target);
-  void split_n_insert_leaf(const key_t &key, const val_t &val, int slot,
-                           leaf_t *target);
+ private:
+  leaf_t* locate_leaf(key_t key, uint64_t& version);
+  leaf_t* locate_leaf_locked(key_t key);
+
+  void insert_leaf(const key_t& key, const val_t& val, leaf_t* target);
+  void split_n_insert_leaf(const key_t& key, const val_t& val, int slot,
+                           leaf_t* target);
 
   inline void allocate_new_block();
-  inline uint8_t *allocate_node();
-  inline internal_t *allocate_internal();
-  inline leaf_t *allocate_leaf();
+  inline uint8_t* allocate_node();
+  inline internal_t* allocate_internal();
+  inline leaf_t* allocate_leaf();
   inline size_t available_node_index();
 
-  node_t *root = nullptr;
-  leaf_t *begin = nullptr;
+  node_t* root = nullptr;
+  leaf_t* begin = nullptr;
   std::atomic<uint32_t> size_est;
   std::mutex alloc_mut;
-  std::vector<uint8_t *> allocated_blocks;
+  std::vector<uint8_t*> allocated_blocks;
   size_t next_node_i = 0;
   static const size_t node_n_per_block = alt_buf_fanout + 1;
   static const size_t node_size = std::max(sizeof(leaf_t), sizeof(internal_t));

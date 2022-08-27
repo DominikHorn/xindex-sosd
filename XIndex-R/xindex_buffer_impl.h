@@ -52,9 +52,9 @@ AltBtreeBuffer<key_t, val_t>::~AltBtreeBuffer() {
 }
 
 template <class key_t, class val_t>
-inline bool AltBtreeBuffer<key_t, val_t>::get(const key_t &key, val_t &val) {
+inline bool AltBtreeBuffer<key_t, val_t>::get(const key_t& key, val_t& val) {
   uint64_t leaf_ver;
-  leaf_t *leaf_ptr = locate_leaf(key, leaf_ver);
+  leaf_t* leaf_ptr = locate_leaf(key, leaf_ver);
 
   while (true) {
     int slot = leaf_ptr->find_first_larger_than_or_equal_to(key);
@@ -72,7 +72,7 @@ inline bool AltBtreeBuffer<key_t, val_t>::get(const key_t &key, val_t &val) {
       // the node is changed, possibly split, so need to check its next
       leaf_ver = leaf_ptr->version;  // read version before reading next
       memory_fence();
-      leaf_t *next_ptr = leaf_ptr->next;  // in case this pointer changes
+      leaf_t* next_ptr = leaf_ptr->next;  // in case this pointer changes
       while (next_ptr && next_ptr->keys[0] <= key) {
         leaf_ptr = next_ptr;
         leaf_ver = leaf_ptr->version;
@@ -84,9 +84,9 @@ inline bool AltBtreeBuffer<key_t, val_t>::get(const key_t &key, val_t &val) {
 }
 
 template <class key_t, class val_t>
-inline bool AltBtreeBuffer<key_t, val_t>::update(const key_t &key,
-                                                 const val_t &val) {
-  leaf_t *leaf_ptr = locate_leaf_locked(key);
+inline bool AltBtreeBuffer<key_t, val_t>::update(const key_t& key,
+                                                 const val_t& val) {
+  leaf_t* leaf_ptr = locate_leaf_locked(key);
   int slot = leaf_ptr->find_first_larger_than_or_equal_to(key);
   bool res = (slot < leaf_ptr->key_n && leaf_ptr->keys[slot] == key)
                  ? leaf_ptr->vals[slot].update_ignoring_ptr(val)
@@ -97,15 +97,15 @@ inline bool AltBtreeBuffer<key_t, val_t>::update(const key_t &key,
 }
 
 template <class key_t, class val_t>
-inline void AltBtreeBuffer<key_t, val_t>::insert(const key_t &key,
-                                                 const val_t &val) {
-  leaf_t *leaf_ptr = locate_leaf_locked(key);
+inline void AltBtreeBuffer<key_t, val_t>::insert(const key_t& key,
+                                                 const val_t& val) {
+  leaf_t* leaf_ptr = locate_leaf_locked(key);
   insert_leaf(key, val, leaf_ptr);  // lock is released within
 }
 
 template <class key_t, class val_t>
-inline bool AltBtreeBuffer<key_t, val_t>::remove(const key_t &key) {
-  leaf_t *leaf_ptr = locate_leaf_locked(key);
+inline bool AltBtreeBuffer<key_t, val_t>::remove(const key_t& key) {
+  leaf_t* leaf_ptr = locate_leaf_locked(key);
   int slot = leaf_ptr->find_first_larger_than_or_equal_to(key);
   bool res = (slot < leaf_ptr->key_n && leaf_ptr->keys[slot] == key)
                  ? leaf_ptr->vals[slot].remove_ignoring_ptr()
@@ -117,8 +117,8 @@ inline bool AltBtreeBuffer<key_t, val_t>::remove(const key_t &key) {
 
 template <class key_t, class val_t>
 inline size_t AltBtreeBuffer<key_t, val_t>::scan(
-    const key_t &key_begin, const size_t n,
-    std::vector<std::pair<key_t, val_t>> &result) {
+    const key_t& key_begin, const size_t n,
+    std::vector<std::pair<key_t, val_t>>& result) {
   result.clear();
   DataSource source(key_begin, this);
   source.advance_to_next_valid();
@@ -135,8 +135,8 @@ inline size_t AltBtreeBuffer<key_t, val_t>::scan(
 
 template <class key_t, class val_t>
 inline void AltBtreeBuffer<key_t, val_t>::range_scan(
-    const key_t &key_begin, const key_t &key_end,
-    std::vector<std::pair<key_t, val_t>> &result) {
+    const key_t& key_begin, const key_t& key_end,
+    std::vector<std::pair<key_t, val_t>>& result) {
   COUT_N_EXIT("not implemented yet");
 }
 
@@ -146,11 +146,11 @@ inline uint32_t AltBtreeBuffer<key_t, val_t>::size() {
 }
 
 template <class key_t, class val_t>
-inline typename AltBtreeBuffer<key_t, val_t>::leaf_t *
-AltBtreeBuffer<key_t, val_t>::locate_leaf(key_t key, uint64_t &leaf_ver) {
+inline typename AltBtreeBuffer<key_t, val_t>::leaf_t*
+AltBtreeBuffer<key_t, val_t>::locate_leaf(key_t key, uint64_t& leaf_ver) {
 retry:
   // first make sure we start with correct root
-  node_t *node_ptr = root;
+  node_t* node_ptr = root;
   uint64_t node_ver = node_ptr->version;
   memory_fence();
   if (node_ptr->parent != nullptr) {
@@ -160,10 +160,10 @@ retry:
   while (true) {
     if (node_ptr->is_leaf) {
       leaf_ver = node_ver;
-      return (leaf_t *)node_ptr;
+      return (leaf_t*)node_ptr;
     }
 
-    node_t *next_ptr = ((internal_t *)node_ptr)->find_child(key);
+    node_t* next_ptr = ((internal_t*)node_ptr)->find_child(key);
     uint64_t next_ver = next_ptr->version;  // read child's version before
     memory_fence();  // validating parent's to avoid reading stale child
     bool locked = node_ptr->locked == 1;
@@ -180,10 +180,10 @@ retry:
 }
 
 template <class key_t, class val_t>
-inline typename AltBtreeBuffer<key_t, val_t>::leaf_t *
+inline typename AltBtreeBuffer<key_t, val_t>::leaf_t*
 AltBtreeBuffer<key_t, val_t>::locate_leaf_locked(key_t key) {
   uint64_t leaf_ver;
-  leaf_t *leaf_ptr = locate_leaf(key, leaf_ver);
+  leaf_t* leaf_ptr = locate_leaf(key, leaf_ver);
 
   while (true) {
     leaf_ptr->lock();
@@ -192,7 +192,7 @@ AltBtreeBuffer<key_t, val_t>::locate_leaf_locked(key_t key) {
       leaf_ptr->node_t::unlock();
       leaf_ver = leaf_ptr->version;  // read version before reading next
       memory_fence();
-      leaf_t *next_ptr = leaf_ptr->next;  // in case this pointer changes
+      leaf_t* next_ptr = leaf_ptr->next;  // in case this pointer changes
       while (next_ptr && next_ptr->keys[0] <= key) {
         leaf_ptr = next_ptr;
         leaf_ver = leaf_ptr->version;
@@ -208,9 +208,9 @@ AltBtreeBuffer<key_t, val_t>::locate_leaf_locked(key_t key) {
 }
 
 template <class key_t, class val_t>
-void AltBtreeBuffer<key_t, val_t>::insert_leaf(const key_t &key,
-                                               const val_t &val,
-                                               leaf_t *target) {
+void AltBtreeBuffer<key_t, val_t>::insert_leaf(const key_t& key,
+                                               const val_t& val,
+                                               leaf_t* target) {
   // first try to update inplace (without modifying mem layout)
   int slot = target->find_first_larger_than_or_equal_to(key);
   if (slot < target->key_n && target->keys[slot] == key) {
@@ -250,12 +250,12 @@ void AltBtreeBuffer<key_t, val_t>::insert_leaf(const key_t &key,
 }
 
 template <class key_t, class val_t>
-void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
-                                                       const val_t &val,
+void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t& insert_key,
+                                                       const val_t& val,
                                                        int slot,
-                                                       leaf_t *target) {
-  node_t *node_ptr = target;
-  node_t *sib_ptr = allocate_leaf();
+                                                       leaf_t* target) {
+  node_t* node_ptr = target;
+  node_t* sib_ptr = allocate_leaf();
   sib_ptr->lock();
   sib_ptr->is_leaf = true;
 
@@ -271,30 +271,30 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
   if (slot >= mid) {  // insert to the new sibling
     node_ptr->copy_keys(mid, slot, sib_ptr->keys);
     node_ptr->copy_keys(slot, sib_ptr->keys + slot - mid + 1);
-    ((leaf_t *)node_ptr)->copy_vals(mid, slot, ((leaf_t *)sib_ptr)->vals);
-    ((leaf_t *)node_ptr)
-        ->copy_vals(slot, ((leaf_t *)sib_ptr)->vals + slot - mid + 1);
+    ((leaf_t*)node_ptr)->copy_vals(mid, slot, ((leaf_t*)sib_ptr)->vals);
+    ((leaf_t*)node_ptr)
+        ->copy_vals(slot, ((leaf_t*)sib_ptr)->vals + slot - mid + 1);
 
     sib_ptr->keys[slot - mid] = insert_key;
-    ((leaf_t *)sib_ptr)->vals[slot - mid] = atomic_val_t(val);
+    ((leaf_t*)sib_ptr)->vals[slot - mid] = atomic_val_t(val);
 
     sib_ptr->key_n = node_ptr->key_n - mid + 1;
     node_ptr->key_n = mid;
   } else {  // insert to old leaf
     node_ptr->copy_keys(mid, sib_ptr->keys);
-    ((leaf_t *)node_ptr)->copy_vals(mid, ((leaf_t *)sib_ptr)->vals);
+    ((leaf_t*)node_ptr)->copy_vals(mid, ((leaf_t*)sib_ptr)->vals);
     node_ptr->move_keys_backward(slot, mid, 1);
-    ((leaf_t *)node_ptr)->move_vals_backward(slot, mid, 1);
+    ((leaf_t*)node_ptr)->move_vals_backward(slot, mid, 1);
 
     node_ptr->keys[slot] = insert_key;
-    ((leaf_t *)node_ptr)->vals[slot] = atomic_val_t(val);
+    ((leaf_t*)node_ptr)->vals[slot] = atomic_val_t(val);
 
     sib_ptr->key_n = node_ptr->key_n - mid;
     node_ptr->key_n = mid + 1;
   }
   memory_fence();  // sibling needs to have right data before visible
-  ((leaf_t *)sib_ptr)->next = ((leaf_t *)node_ptr)->next;
-  ((leaf_t *)node_ptr)->next = (leaf_t *)sib_ptr;
+  ((leaf_t*)sib_ptr)->next = ((leaf_t*)node_ptr)->next;
+  ((leaf_t*)node_ptr)->next = (leaf_t*)sib_ptr;
 
   assert(sib_ptr->is_leaf);
   assert(sib_ptr->locked);
@@ -312,7 +312,7 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
 
   while (true) {
     // lock the right parent
-    internal_t *parent_ptr;
+    internal_t* parent_ptr;
     while (true) {
       parent_ptr = node_ptr->parent;
       if (!parent_ptr) {
@@ -332,8 +332,8 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
       parent_ptr->is_leaf = false;
 
       parent_ptr->keys[0] = split_key;
-      ((internal_t *)parent_ptr)->children[0] = node_ptr;
-      ((internal_t *)parent_ptr)->children[1] = sib_ptr;
+      ((internal_t*)parent_ptr)->children[0] = node_ptr;
+      ((internal_t*)parent_ptr)->children[1] = sib_ptr;
       parent_ptr->key_n = 1;
 
       for (int child_i = 0; child_i < parent_ptr->key_n - 1; child_i++) {
@@ -358,9 +358,9 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
              parent_ptr->find_first_larger_than_or_equal_to(split_key));
 
       parent_ptr->move_keys_backward(slot, 1);
-      ((internal_t *)parent_ptr)->move_children_backward(slot + 1, 1);
+      ((internal_t*)parent_ptr)->move_children_backward(slot + 1, 1);
       parent_ptr->keys[slot] = split_key;
-      ((internal_t *)parent_ptr)->children[slot + 1] = sib_ptr;
+      ((internal_t*)parent_ptr)->children[slot + 1] = sib_ptr;
 
       parent_ptr->key_n++;
       sib_ptr->parent = parent_ptr;
@@ -373,16 +373,16 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
         assert(parent_ptr->keys[child_i] < parent_ptr->keys[child_i + 1]);
       }
       for (int child_i = 0; child_i < parent_ptr->key_n; child_i++) {
-        assert(((internal_t *)parent_ptr)
+        assert(((internal_t*)parent_ptr)
                    ->children[child_i]
-                   ->keys[((internal_t *)parent_ptr)->children[child_i]->key_n -
+                   ->keys[((internal_t*)parent_ptr)->children[child_i]->key_n -
                           1] < parent_ptr->keys[child_i]);
-        assert(((internal_t *)parent_ptr)->children[child_i + 1]->keys[0] >=
+        assert(((internal_t*)parent_ptr)->children[child_i + 1]->keys[0] >=
                parent_ptr->keys[child_i]);
       }
       for (int child_i = 0; child_i < parent_ptr->key_n + 1; child_i++) {
-        assert(((internal_t *)parent_ptr)->children[child_i]->parent ==
-               (internal_t *)parent_ptr);
+        assert(((internal_t*)parent_ptr)->children[child_i]->parent ==
+               (internal_t*)parent_ptr);
       }
 
       memory_fence();
@@ -395,8 +395,8 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
       sib_ptr->node_t::unlock();
       return;
     } else {  // recursive split, knock the parent as the new node to split
-      node_t *prev_sib_ptr = sib_ptr;
-      node_t *prev_node_ptr = node_ptr;
+      node_t* prev_sib_ptr = sib_ptr;
+      node_t* prev_node_ptr = node_ptr;
       key_t prev_split_key = split_key;
 
       node_ptr = parent_ptr;
@@ -420,23 +420,23 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
         if (slot == mid) {  // prev split key will be the new split key
 
           node_ptr->copy_keys(mid, sib_ptr->keys);
-          ((internal_t *)node_ptr)
-              ->copy_children(mid + 1, ((internal_t *)sib_ptr)->children + 1);
-          ((internal_t *)sib_ptr)->children[0] = prev_sib_ptr;
+          ((internal_t*)node_ptr)
+              ->copy_children(mid + 1, ((internal_t*)sib_ptr)->children + 1);
+          ((internal_t*)sib_ptr)->children[0] = prev_sib_ptr;
 
           split_key = prev_split_key;
         } else {  // mid key will be new split key
 
           node_ptr->copy_keys(mid + 1, slot, sib_ptr->keys);
           node_ptr->copy_keys(slot, sib_ptr->keys + slot - mid);
-          ((internal_t *)node_ptr)
+          ((internal_t*)node_ptr)
               ->copy_children(mid + 1, slot + 1,
-                              ((internal_t *)sib_ptr)->children);
-          ((internal_t *)node_ptr)
+                              ((internal_t*)sib_ptr)->children);
+          ((internal_t*)node_ptr)
               ->copy_children(
-                  slot + 1, ((internal_t *)sib_ptr)->children + slot - mid + 1);
+                  slot + 1, ((internal_t*)sib_ptr)->children + slot - mid + 1);
           sib_ptr->keys[slot - mid - 1] = prev_split_key;
-          ((internal_t *)sib_ptr)->children[slot - mid] = prev_sib_ptr;
+          ((internal_t*)sib_ptr)->children[slot - mid] = prev_sib_ptr;
 
           split_key = node_ptr->keys[mid];
         }
@@ -447,24 +447,24 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
       } else {  // insert to old leaf
 
         node_ptr->copy_keys(mid + 1, sib_ptr->keys);
-        ((internal_t *)node_ptr)
-            ->copy_children(mid + 1, ((internal_t *)sib_ptr)->children);
+        ((internal_t*)node_ptr)
+            ->copy_children(mid + 1, ((internal_t*)sib_ptr)->children);
 
         split_key = node_ptr->keys[mid];  // copy it before moving
 
         node_ptr->move_keys_backward(slot, mid, 1);
-        ((internal_t *)node_ptr)->move_children_backward(slot + 1, mid + 1, 1);
+        ((internal_t*)node_ptr)->move_children_backward(slot + 1, mid + 1, 1);
 
         node_ptr->keys[slot] = prev_split_key;
-        ((internal_t *)node_ptr)->children[slot + 1] = prev_sib_ptr;
+        ((internal_t*)node_ptr)->children[slot + 1] = prev_sib_ptr;
 
-        prev_sib_ptr->parent = (internal_t *)node_ptr;
+        prev_sib_ptr->parent = (internal_t*)node_ptr;
         sib_ptr->key_n = node_ptr->key_n - mid - 1;
         node_ptr->key_n = mid + 1;
       }
       for (int child_i = 0; child_i < sib_ptr->key_n + 1; child_i++) {
-        ((internal_t *)sib_ptr)->children[child_i]->parent =
-            (internal_t *)sib_ptr;
+        ((internal_t*)sib_ptr)->children[child_i]->parent =
+            (internal_t*)sib_ptr;
       }
 
       memory_fence();
@@ -486,16 +486,16 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
       }
       for (int child_i = 0; child_i < node_ptr->key_n; child_i++) {
         assert(
-            ((internal_t *)node_ptr)
+            ((internal_t*)node_ptr)
                 ->children[child_i]
-                ->keys[((internal_t *)node_ptr)->children[child_i]->key_n - 1] <
+                ->keys[((internal_t*)node_ptr)->children[child_i]->key_n - 1] <
             node_ptr->keys[child_i]);
-        assert(((internal_t *)node_ptr)->children[child_i + 1]->keys[0] >=
+        assert(((internal_t*)node_ptr)->children[child_i + 1]->keys[0] >=
                node_ptr->keys[child_i]);
       }
       for (int child_i = 0; child_i < node_ptr->key_n + 1; child_i++) {
-        assert(((internal_t *)node_ptr)->children[child_i]->parent ==
-               (internal_t *)node_ptr);
+        assert(((internal_t*)node_ptr)->children[child_i]->parent ==
+               (internal_t*)node_ptr);
       }
 
       for (int child_i = 0; child_i < sib_ptr->key_n - 1; child_i++) {
@@ -503,16 +503,16 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
       }
       for (int child_i = 0; child_i < sib_ptr->key_n; child_i++) {
         assert(
-            ((internal_t *)sib_ptr)
+            ((internal_t*)sib_ptr)
                 ->children[child_i]
-                ->keys[((internal_t *)sib_ptr)->children[child_i]->key_n - 1] <
+                ->keys[((internal_t*)sib_ptr)->children[child_i]->key_n - 1] <
             sib_ptr->keys[child_i]);
-        assert(((internal_t *)sib_ptr)->children[child_i + 1]->keys[0] >=
+        assert(((internal_t*)sib_ptr)->children[child_i + 1]->keys[0] >=
                sib_ptr->keys[child_i]);
       }
       for (int child_i = 0; child_i < sib_ptr->key_n + 1; child_i++) {
-        assert(((internal_t *)sib_ptr)->children[child_i]->parent ==
-               (internal_t *)sib_ptr);
+        assert(((internal_t*)sib_ptr)->children[child_i]->parent ==
+               (internal_t*)sib_ptr);
       }
     }
   }
@@ -520,12 +520,12 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t &insert_key,
 
 template <class key_t, class val_t>
 inline void AltBtreeBuffer<key_t, val_t>::allocate_new_block() {
-  uint8_t *p = (uint8_t *)std::malloc(node_n_per_block * node_size);
+  uint8_t* p = (uint8_t*)std::malloc(node_n_per_block * node_size);
   allocated_blocks.push_back(p);
 }
 
 template <class key_t, class val_t>
-inline uint8_t *AltBtreeBuffer<key_t, val_t>::allocate_node() {
+inline uint8_t* AltBtreeBuffer<key_t, val_t>::allocate_node() {
   size_t index = available_node_index();
   size_t block_i = index / node_n_per_block;
   size_t node_i = index % node_n_per_block;
@@ -533,20 +533,20 @@ inline uint8_t *AltBtreeBuffer<key_t, val_t>::allocate_node() {
 }
 
 template <class key_t, class val_t>
-inline typename AltBtreeBuffer<key_t, val_t>::internal_t *
+inline typename AltBtreeBuffer<key_t, val_t>::internal_t*
 AltBtreeBuffer<key_t, val_t>::allocate_internal() {
   alloc_mut.lock();
-  internal_t *node_ptr = (internal_t *)allocate_node();
+  internal_t* node_ptr = (internal_t*)allocate_node();
   alloc_mut.unlock();
   new (node_ptr) internal_t();
   return node_ptr;
 }
 
 template <class key_t, class val_t>
-inline typename AltBtreeBuffer<key_t, val_t>::leaf_t *
+inline typename AltBtreeBuffer<key_t, val_t>::leaf_t*
 AltBtreeBuffer<key_t, val_t>::allocate_leaf() {
   alloc_mut.lock();
-  leaf_t *node_ptr = (leaf_t *)allocate_node();
+  leaf_t* node_ptr = (leaf_t*)allocate_node();
   alloc_mut.unlock();
   new (node_ptr) leaf_t();
   return node_ptr;
@@ -565,8 +565,8 @@ inline size_t AltBtreeBuffer<key_t, val_t>::available_node_index() {
 template <class key_t, class val_t>
 void AltBtreeBuffer<key_t, val_t>::Node::lock() {
   uint8_t unlocked = 0, locked = 1;
-  while (unlikely(cmpxchgb((uint8_t *)&this->locked, unlocked, locked) !=
-                  unlocked))
+  while (
+      unlikely(cmpxchgb((uint8_t*)&this->locked, unlocked, locked) != unlocked))
     ;
 }
 
@@ -577,7 +577,7 @@ void AltBtreeBuffer<key_t, val_t>::Node::unlock() {
 
 template <class key_t, class val_t>
 int AltBtreeBuffer<key_t, val_t>::Node::find_first_larger_than_or_equal_to(
-    const key_t &key) {
+    const key_t& key) {
   uint8_t key_n = this->key_n;
   uint8_t begin_i = 0, end_i = key_n;
   uint8_t mid = (begin_i + end_i) / 2;
@@ -596,7 +596,7 @@ int AltBtreeBuffer<key_t, val_t>::Node::find_first_larger_than_or_equal_to(
 
 template <class key_t, class val_t>
 int AltBtreeBuffer<key_t, val_t>::Node::find_first_larger_than(
-    const key_t &key) {
+    const key_t& key) {
   uint8_t key_n = this->key_n;
   uint8_t begin_i = 0, end_i = key_n;
   uint8_t mid = (begin_i + end_i) / 2;
@@ -627,18 +627,18 @@ void AltBtreeBuffer<key_t, val_t>::Node::move_keys_backward(int begin,
 
 template <class key_t, class val_t>
 void AltBtreeBuffer<key_t, val_t>::Node::copy_keys(int begin, int end,
-                                                   key_t *dst) {
+                                                   key_t* dst) {
   std::copy(keys + begin, keys + end, dst);
 }
 
 template <class key_t, class val_t>
-void AltBtreeBuffer<key_t, val_t>::Node::copy_keys(int begin, key_t *dst) {
+void AltBtreeBuffer<key_t, val_t>::Node::copy_keys(int begin, key_t* dst) {
   std::copy(keys + begin, keys + key_n, dst);
 }
 
 template <class key_t, class val_t>
-typename AltBtreeBuffer<key_t, val_t>::node_t *
-AltBtreeBuffer<key_t, val_t>::Internal::find_child(const key_t &key) {
+typename AltBtreeBuffer<key_t, val_t>::node_t*
+AltBtreeBuffer<key_t, val_t>::Internal::find_child(const key_t& key) {
   return children[node_t::find_first_larger_than(key)];
 }
 
@@ -658,13 +658,13 @@ void AltBtreeBuffer<key_t, val_t>::Internal::move_children_backward(int begin,
 
 template <class key_t, class val_t>
 void AltBtreeBuffer<key_t, val_t>::Internal::copy_children(int begin, int end,
-                                                           node_t **dst) {
+                                                           node_t** dst) {
   std::copy(children + begin, children + end, dst);
 }
 
 template <class key_t, class val_t>
 void AltBtreeBuffer<key_t, val_t>::Internal::copy_children(int begin,
-                                                           node_t **dst) {
+                                                           node_t** dst) {
   std::copy(children + begin, children + key_n + 1, dst);
 }
 
@@ -682,21 +682,21 @@ void AltBtreeBuffer<key_t, val_t>::Leaf::move_vals_backward(int begin,
 
 template <class key_t, class val_t>
 void AltBtreeBuffer<key_t, val_t>::Leaf::copy_vals(int begin, int end,
-                                                   atomic_val_t *dst) {
+                                                   atomic_val_t* dst) {
   std::copy(vals + begin, vals + end, dst);
 }
 
 template <class key_t, class val_t>
 void AltBtreeBuffer<key_t, val_t>::Leaf::copy_vals(int begin,
-                                                   atomic_val_t *dst) {
+                                                   atomic_val_t* dst) {
   std::copy(vals + begin, vals + key_n, dst);
 }
 
 template <class key_t, class val_t>
 AltBtreeBuffer<key_t, val_t>::DataSource::DataSource(key_t begin,
-                                                     AltBtreeBuffer *buffer) {
+                                                     AltBtreeBuffer* buffer) {
   uint64_t leaf_ver;
-  leaf_t *leaf_ptr = buffer->locate_leaf(begin, leaf_ver);
+  leaf_t* leaf_ptr = buffer->locate_leaf(begin, leaf_ver);
 
   while (true) {
     int slot = leaf_ptr->find_first_larger_than_or_equal_to(begin);
@@ -722,7 +722,7 @@ AltBtreeBuffer<key_t, val_t>::DataSource::DataSource(key_t begin,
       // the node is changed, possibly split, so need to check its next
       leaf_ver = leaf_ptr->version;  // read version before reading next
       memory_fence();
-      leaf_t *next_ptr = leaf_ptr->next;  // in case this pointer changes
+      leaf_t* next_ptr = leaf_ptr->next;  // in case this pointer changes
       while (next_ptr && next_ptr->keys[0] <= begin) {
         leaf_ptr = next_ptr;
         leaf_ver = leaf_ptr->version;
@@ -745,7 +745,7 @@ void AltBtreeBuffer<key_t, val_t>::DataSource::advance_to_next_valid() {
         return;
       }
 
-      leaf_t *leaf_ptr = next;
+      leaf_t* leaf_ptr = next;
       uint64_t leaf_ver = leaf_ptr->version;
       memory_fence();
 
@@ -785,17 +785,17 @@ void AltBtreeBuffer<key_t, val_t>::DataSource::advance_to_next_valid() {
 }
 
 template <class key_t, class val_t>
-const key_t &AltBtreeBuffer<key_t, val_t>::DataSource::get_key() {
+const key_t& AltBtreeBuffer<key_t, val_t>::DataSource::get_key() {
   return keys[pos];
 }
 
 template <class key_t, class val_t>
-const val_t &AltBtreeBuffer<key_t, val_t>::DataSource::get_val() {
+const val_t& AltBtreeBuffer<key_t, val_t>::DataSource::get_val() {
   return vals[pos];
 }
 
 template <class key_t, class val_t>
-AltBtreeBuffer<key_t, val_t>::RefSource::RefSource(AltBtreeBuffer *buffer)
+AltBtreeBuffer<key_t, val_t>::RefSource::RefSource(AltBtreeBuffer* buffer)
     : next(buffer->begin) {
   assert(next);
   uint64_t ver;
@@ -815,7 +815,7 @@ void AltBtreeBuffer<key_t, val_t>::RefSource::advance_to_next_valid() {
         return;
       }
 
-      leaf_t *leaf_ptr = next;
+      leaf_t* leaf_ptr = next;
       int key_n = leaf_ptr->key_n;
 
       pos = 0;
@@ -840,14 +840,49 @@ void AltBtreeBuffer<key_t, val_t>::RefSource::advance_to_next_valid() {
 }
 
 template <class key_t, class val_t>
-const key_t &AltBtreeBuffer<key_t, val_t>::RefSource::get_key() {
+const key_t& AltBtreeBuffer<key_t, val_t>::RefSource::get_key() {
   return keys[pos];
 }
 
 template <class key_t, class val_t>
-typename AltBtreeBuffer<key_t, val_t>::RefSource::atomic_val_t &
+typename AltBtreeBuffer<key_t, val_t>::RefSource::atomic_val_t&
 AltBtreeBuffer<key_t, val_t>::RefSource::get_val() {
   return *(val_ptrs[pos]);
+}
+
+template <class key_t, class val_t>
+size_t AltBtreeBuffer<key_t, val_t>::byte_size() const {
+  const size_t metadata_size = sizeof(decltype(*this));
+  const size_t allocated_blocks_size =
+      allocated_blocks.size() * (node_n_per_block * node_size);
+  const size_t tree_size = root != nullptr ? root->byte_size() : 0;
+
+  return metadata_size + allocated_blocks_size + tree_size;
+}
+
+template <class key_t, class val_t>
+size_t AltBtreeBuffer<key_t, val_t>::Internal::byte_size() const {
+  const size_t metadata_size = sizeof(decltype(*this));
+
+  size_t total_child_size = 0;
+  for (size_t i = 0; i < alt_buf_fanout; i++) {
+    const auto& child = children[i];
+    if (child != nullptr)
+      total_child_size += child->byte_size();
+  }
+
+  return metadata_size + total_child_size;
+}
+
+template <class key_t, class val_t>
+size_t AltBtreeBuffer<key_t, val_t>::Leaf::byte_size() const {
+  // make vals size explicit
+  const size_t metadata_size = sizeof(decltype(*this)) - sizeof(vals);
+
+  // equivalent to sizeof(vals) for simple atomic_val_t otherwise larger
+  const size_t vals_size = node_capacity * atomic_val_t::byte_size();
+
+  return metadata_size + vals_size;
 }
 
 }  // namespace xindex

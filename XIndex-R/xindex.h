@@ -39,27 +39,31 @@ class XIndex {
   typedef void iterator_t;
 
  public:
-  XIndex(const std::vector<key_t> &keys, const std::vector<val_t> &vals,
+  XIndex(const std::vector<key_t>& keys, const std::vector<val_t>& vals,
          size_t worker_num, size_t bg_n);
   ~XIndex();
 
-  inline bool get(const key_t &key, val_t &val, const uint32_t worker_id);
-  inline bool put(const key_t &key, const val_t &val, const uint32_t worker_id);
-  inline bool remove(const key_t &key, const uint32_t worker_id);
-  inline size_t scan(const key_t &begin, const size_t n,
-                     std::vector<std::pair<key_t, val_t>> &result,
+  inline bool get(const key_t& key, val_t& val, const uint32_t worker_id);
+  inline bool put(const key_t& key, const val_t& val, const uint32_t worker_id);
+  inline bool remove(const key_t& key, const uint32_t worker_id);
+  inline size_t scan(const key_t& begin, const size_t n,
+                     std::vector<std::pair<key_t, val_t>>& result,
                      const uint32_t worker_id);
-  size_t range_scan(const key_t &begin, const key_t &end,
-                    std::vector<std::pair<key_t, val_t>> &result,
+  size_t range_scan(const key_t& begin, const key_t& end,
+                    std::vector<std::pair<key_t, val_t>>& result,
                     const uint32_t worker_id);
+
+  /// computes the in memory size of the index in bytes
+  size_t byte_size() const;
+
  private:
   void start_bg();
   void terminate_bg();
 
   // this function should periodically check and perform structure updates
-  static void *background(void *this_);
+  static void* background(void* this_);
 
-  root_t *volatile root = nullptr;
+  root_t* volatile root = nullptr;
   pthread_t bg_master;
   size_t bg_num;
   volatile bool bg_running = true;
