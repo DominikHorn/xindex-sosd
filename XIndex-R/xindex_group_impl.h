@@ -31,7 +31,14 @@ template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>::Group() {}
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-Group<key_t, val_t, seq, max_model_n>::~Group() {}
+Group<key_t, val_t, seq, max_model_n>::~Group() {
+  free_data();
+  free_buffer();
+  if (buffer_temp != nullptr) {
+    delete buffer_temp;  // due to internal mess, potential duplicate free (?)
+    buffer_temp = nullptr;
+  }
+}
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq, max_model_n>::init(
@@ -400,11 +407,19 @@ inline void Group<key_t, val_t, seq, max_model_n>::compact_phase_2() {
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq, max_model_n>::free_data() {
+  if (data == nullptr)
+    return;
+
   delete[] data;
+  data = nullptr;
 }
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
+  if (buffer == nullptr)
+    return;
+
   delete buffer;
+  buffer = nullptr;
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>

@@ -61,6 +61,11 @@ XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t>& keys,
 template <class key_t, class val_t, bool seq>
 XIndex<key_t, val_t, seq>::~XIndex() {
   terminate_bg();
+
+  if (root != nullptr) {
+    delete root;
+    root = nullptr;
+  }
 }
 
 template <class key_t, class val_t, bool seq>

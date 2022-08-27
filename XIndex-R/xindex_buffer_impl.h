@@ -47,7 +47,10 @@ AltBtreeBuffer<key_t, val_t>::AltBtreeBuffer() {
 template <class key_t, class val_t>
 AltBtreeBuffer<key_t, val_t>::~AltBtreeBuffer() {
   for (size_t b_i = 0; b_i < allocated_blocks.size(); ++b_i) {
-    std::free(allocated_blocks[b_i]);
+    if (allocated_blocks[b_i] != nullptr) {
+      std::free(allocated_blocks[b_i]);
+      allocated_blocks[b_i] = nullptr;
+    }
   }
 }
 

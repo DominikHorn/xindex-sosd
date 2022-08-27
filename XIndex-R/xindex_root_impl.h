@@ -29,7 +29,23 @@
 namespace xindex {
 
 template <class key_t, class val_t, bool seq>
-Root<key_t, val_t, seq>::~Root() {}
+Root<key_t, val_t, seq>::~Root() {
+  // free models
+  if (rmi_2nd_stage != nullptr) {
+    delete[] rmi_2nd_stage;
+    rmi_2nd_stage = nullptr;
+  }
+
+  // free groups memory
+  if (groups != nullptr) {
+    for (size_t i = 0; i < group_n; i++) {
+      const auto& pair = groups[i];
+      if (pair.second != nullptr)
+        delete pair.second;
+    }
+    groups = nullptr;
+  }
+}
 
 template <class key_t, class val_t, bool seq>
 void Root<key_t, val_t, seq>::init(const std::vector<key_t>& keys,
