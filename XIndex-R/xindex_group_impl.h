@@ -30,10 +30,9 @@ namespace xindex {
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>::~Group() {
-  // TODO(horndo): this causes use after free; no time to fix the underlying error
-  // free_data();
-  // free_buffer();
-  // free_buffer_temp();
+  free_data();
+  free_buffer();
+  free_buffer_temp();
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
