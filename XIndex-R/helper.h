@@ -42,7 +42,7 @@
     abort();                       \
   }
 
-#if defined(NDEBUGGING)
+#ifndef NDEBUG
 #define DEBUG_THIS(this)
 #else
 #define DEBUG_THIS(this) std::cerr << this << std::endl
@@ -57,15 +57,18 @@
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 
-inline void memory_fence() { asm volatile("mfence" : : : "memory"); }
+inline void memory_fence() {
+  asm volatile("mfence" : : : "memory");
+}
 
 /** @brief Compiler fence.
  * Prevents reordering of loads and stores by the compiler. Not intended to
  * synchronize the processor's caches. */
-inline void fence() { asm volatile("" : : : "memory"); }
+inline void fence() {
+  asm volatile("" : : : "memory");
+}
 
-inline uint64_t cmpxchg(uint64_t *object, uint64_t expected,
-                               uint64_t desired) {
+inline uint64_t cmpxchg(uint64_t* object, uint64_t expected, uint64_t desired) {
   asm volatile("lock; cmpxchgq %2,%1"
                : "+a"(expected), "+m"(*object)
                : "r"(desired)
@@ -74,8 +77,7 @@ inline uint64_t cmpxchg(uint64_t *object, uint64_t expected,
   return expected;
 }
 
-inline uint8_t cmpxchgb(uint8_t *object, uint8_t expected,
-                               uint8_t desired) {
+inline uint8_t cmpxchgb(uint8_t* object, uint8_t expected, uint8_t desired) {
   asm volatile("lock; cmpxchgb %2,%1"
                : "+a"(expected), "+m"(*object)
                : "r"(desired)

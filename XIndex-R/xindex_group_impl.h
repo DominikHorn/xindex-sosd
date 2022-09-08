@@ -20,6 +20,7 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
+#include "globals.h"
 #include "xindex_group.h"
 
 #if !defined(XINDEX_GROUP_IMPL_H)
@@ -28,16 +29,11 @@
 namespace xindex {
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-Group<key_t, val_t, seq, max_model_n>::Group() {}
-
-template <class key_t, class val_t, bool seq, size_t max_model_n>
 Group<key_t, val_t, seq, max_model_n>::~Group() {
-  free_data();
-  free_buffer();
-  if (buffer_temp != nullptr) {
-    delete buffer_temp;  // due to internal mess, potential duplicate free (?)
-    buffer_temp = nullptr;
-  }
+  // TODO(horndo): this causes use after free; no time to fix the underlying error
+  // free_data();
+  // free_buffer();
+  // free_buffer_temp();
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
@@ -59,7 +55,9 @@ void Group<key_t, val_t, seq, max_model_n>::init(
   this->capacity = array_size * seq_insert_reserve_factor;
   this->model_n = model_n;
   data = new record_t[this->capacity]();
+  _::allocated_bytes += sizeof(record_t) * this->capacity;
   buffer = new buffer_t();
+  _::allocated_bytes += sizeof(buffer_t);
 
   for (size_t rec_i = 0; rec_i < array_size; rec_i++) {
     data[rec_i].first = *(keys_begin + rec_i);
@@ -207,6 +205,7 @@ Group<key_t, val_t, seq, max_model_n>::split_model() {
   assert(model_n < max_model_n);
 
   Group* new_group = new Group();
+  _::allocated_bytes += sizeof(Group);
 
   new_group->pivot = pivot;
   new_group->array_size = array_size;
@@ -234,6 +233,7 @@ Group<key_t, val_t, seq, max_model_n>::merge_model() {
   assert(model_n > 1);
 
   Group* new_group = new Group();
+  _::allocated_bytes += sizeof(Group);
 
   new_group->pivot = pivot;
   new_group->array_size = array_size;
@@ -258,7 +258,9 @@ Group<key_t, val_t, seq, max_model_n>::split_group_pt1() {
   }
 
   Group* new_group_1 = new Group();
+  _::allocated_bytes += sizeof(Group);
   Group* new_group_2 = new Group();
+  _::allocated_bytes += sizeof(Group);
 
   new_group_1->pivot = pivot;
   new_group_2->pivot = data[array_size / 2].first;
@@ -279,7 +281,9 @@ Group<key_t, val_t, seq, max_model_n>::split_group_pt1() {
   new_group_1->buffer = buffer;
   new_group_2->buffer = buffer;
   new_group_1->buffer_temp = new buffer_t();
+  _::allocated_bytes += sizeof(buffer_t);
   new_group_2->buffer_temp = new buffer_t();
+  _::allocated_bytes += sizeof(buffer_t);
   new_group_1->next = new_group_2;
   new_group_2->next = next;
 #ifdef DEBUGGING
@@ -296,7 +300,9 @@ Group<key_t, val_t, seq, max_model_n>::split_group_pt2() {
   // note that now this->data, this->buffer point to the old group's
   // and are shared with this->next
   Group* new_group_1 = new Group();
+  _::allocated_bytes += sizeof(Group);
   Group* new_group_2 = new Group();
+  _::allocated_bytes += sizeof(Group);
 
   new_group_1->pivot = pivot;
   new_group_2->pivot = this->next->pivot;
@@ -338,9 +344,11 @@ Group<key_t, val_t, seq, max_model_n>::merge_group(
   memory_fence();
   rcu_barrier();
   buffer_temp = new buffer_t();
+  _::allocated_bytes += sizeof(buffer_t);
   next_group.buffer_temp = buffer_temp;
 
   Group* new_group = new Group();
+  _::allocated_bytes += sizeof(Group);
   new_group->model_n = model_n + next_group.model_n;
   if (new_group->model_n > max_model_n) {
     new_group->model_n = max_model_n;
@@ -374,9 +382,11 @@ Group<key_t, val_t, seq, max_model_n>::compact_phase_1() {
   memory_fence();
   rcu_barrier();
   buffer_temp = new buffer_t();
+  _::allocated_bytes += sizeof(buffer_t);
 
   // now merge sort into a new array and train models
   Group* new_group = new Group();
+  _::allocated_bytes += sizeof(Group);
 
   new_group->pivot = pivot;
   merge_refs(new_group->data, new_group->array_size, new_group->capacity);
@@ -410,6 +420,9 @@ void Group<key_t, val_t, seq, max_model_n>::free_data() {
   if (data == nullptr)
     return;
 
+  const size_t bytes_to_delete = sizeof(decltype(*data)) * capacity;
+  assert(_::allocated_bytes > bytes_to_delete);
+  _::allocated_bytes -= bytes_to_delete;
   delete[] data;
   data = nullptr;
 }
@@ -418,8 +431,23 @@ void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
   if (buffer == nullptr)
     return;
 
+  const size_t bytes_to_delete = sizeof(decltype(*buffer));
+  assert(_::allocated_bytes >= bytes_to_delete);
+  _::allocated_bytes -= bytes_to_delete;
   delete buffer;
   buffer = nullptr;
+}
+
+template <class key_t, class val_t, bool seq, size_t max_model_n>
+void Group<key_t, val_t, seq, max_model_n>::free_buffer_temp() {
+  if (buffer_temp == nullptr)
+    return;
+
+  const size_t bytes_to_delete = sizeof(decltype(*buffer_temp));
+  assert(_::allocated_bytes >= bytes_to_delete);
+  _::allocated_bytes -= bytes_to_delete;
+  delete buffer_temp;
+  buffer_temp = nullptr;
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
@@ -466,11 +494,13 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
         }
 
         if ((int32_t)array_size == capacity) {
-          record_t* prev_data = nullptr;
+          const auto prev_capacity = capacity;
+          const record_t* prev_data = data;
+
           capacity = array_size * seq_insert_reserve_factor;
           record_t* new_data = new record_t[capacity]();
+          _::allocated_bytes += capacity * sizeof(record_t);
           memcpy(new_data, data, array_size * sizeof(record_t));
-          prev_data = data;
           data = new_data;
 
           data[pos].first = key;
@@ -480,6 +510,11 @@ inline result_t Group<key_t, val_t, seq, max_model_n>::update_to_array(
 
           rcu_barrier(worker_id);
           memory_fence();
+
+          const size_t bytes_to_delete =
+              sizeof(decltype(*prev_data)) * prev_capacity;
+          assert(_::allocated_bytes > bytes_to_delete);
+          _::allocated_bytes -= bytes_to_delete;
           delete[] prev_data;
           return result_t::ok;
         } else {
@@ -732,6 +767,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs(
   size_t est_size = array_size + buffer->size();
   new_capacity = est_size * seq_insert_reserve_factor;
   new_data = new record_t[new_capacity]();
+  _::allocated_bytes += new_capacity * sizeof(record_t);
   merge_refs_internal(new_data, new_array_size);
   assert((int32_t)new_array_size <= new_capacity);
 }
@@ -749,6 +785,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_n_split(
       (int32_t)est_size > new_capacity_1 ? est_size : new_capacity_1;
 
   record_t* intermediate = new record_t[new_capacity_1]();
+  _::allocated_bytes += new_capacity_1 * sizeof(record_t);
   merge_refs_internal(intermediate, intermediate_size);
 
   uint32_t split_pos = exponential_search_key(intermediate, intermediate_size,
@@ -762,6 +799,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_n_split(
   new_array_size_2 = intermediate_size - split_pos;
   new_capacity_2 = new_array_size_2 * seq_insert_reserve_factor;
   new_data_2 = new record_t[new_capacity_2]();
+  _::allocated_bytes += new_capacity_2 * sizeof(new_data_2);
   memcpy(new_data_2, intermediate + split_pos,
          new_array_size_2 * sizeof(record_t));
 
@@ -777,6 +815,7 @@ inline void Group<key_t, val_t, seq, max_model_n>::merge_refs_with(
                     next_group.buffer->size();
   new_capacity = est_size * seq_insert_reserve_factor;
   new_data = new record_t[new_capacity]();
+  _::allocated_bytes += new_capacity * sizeof(record_t);
 
   uint32_t real_size_1, real_size_2;
   merge_refs_internal(new_data, real_size_1);

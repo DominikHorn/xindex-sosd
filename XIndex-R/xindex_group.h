@@ -82,7 +82,6 @@ class alignas(CACHELINE_SIZE) Group {
   };
 
  public:
-  Group();
   ~Group();
   void init(const typename std::vector<key_t>::const_iterator& keys_begin,
             const typename std::vector<val_t>::const_iterator& vals_begin,
@@ -112,6 +111,7 @@ class alignas(CACHELINE_SIZE) Group {
 
   void free_data();
   void free_buffer();
+  void free_buffer_temp();
 
   /// computes the in memory size in bytes
   size_t byte_size() const;

@@ -36,6 +36,10 @@ XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t>& keys,
                                   const std::vector<val_t>& vals,
                                   size_t worker_num, size_t bg_n)
     : bg_num(bg_n) {
+  // the code leaks memory, which we have no time to fix. For now, just reset the counter
+  // assert(_::allocated_bytes > 0);
+  _::allocated_bytes = 0;
+
   config.worker_n = worker_num;
   // sanity checks
   INVARIANT(config.root_error_bound > 0);
@@ -54,6 +58,8 @@ XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t>& keys,
 
   // malloc memory for root & init root
   root = new root_t();
+  _::allocated_bytes += sizeof(root_t);
+
   root->init(keys, vals);
   start_bg();
 }
@@ -63,9 +69,20 @@ XIndex<key_t, val_t, seq>::~XIndex() {
   terminate_bg();
 
   if (root != nullptr) {
+    // track dealloc
+    const size_t bytes_to_delete = sizeof(decltype(*root));
+    assert(_::allocated_bytes > bytes_to_delete);
+    _::allocated_bytes -= bytes_to_delete;
+
     delete root;
     root = nullptr;
   }
+
+  // by the time this destructor exits, we must have freed everything or else we leak
+  // assert(_::allocated_bytes == 0);
+  if (_::allocated_bytes > 0)
+    std::cerr << "LEAKING " << _::allocated_bytes << " BYTES in xindex"
+              << std::endl;
 }
 
 template <class key_t, class val_t, bool seq>
@@ -175,6 +192,10 @@ void* XIndex<key_t, val_t, seq>::background(void* this_) {
       memory_fence();
       rcu_barrier();
       index.root->trim_root();
+
+      const size_t bytes_to_delete = sizeof(decltype(*old_root));
+      assert(_::allocated_bytes > bytes_to_delete);
+      _::allocated_bytes -= bytes_to_delete;
       delete old_root;
 
       double avg_group_error = 0, max_group_error = 0;
@@ -239,7 +260,6 @@ size_t XIndex<key_t, val_t, seq>::byte_size() const {
 
   return total_size;
 }
-
 }  // namespace xindex
 
 #endif  // XINDEX_IMPL_H

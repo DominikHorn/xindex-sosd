@@ -24,6 +24,7 @@
 #include <mutex>
 #include <vector>
 
+#include "globals.h"
 #include "xindex_buffer.h"
 
 #if !defined(xindex_buffer_IMPL_H)
@@ -36,6 +37,7 @@ AltBtreeBuffer<key_t, val_t>::AltBtreeBuffer() {
   size_est = 0;
   next_node_i = 0;
   allocated_blocks.reserve(1);
+  _::allocated_bytes += sizeof(typename decltype(allocated_blocks)::value_type);
 
   begin = allocate_leaf();
   begin->is_leaf = true;
@@ -48,10 +50,20 @@ template <class key_t, class val_t>
 AltBtreeBuffer<key_t, val_t>::~AltBtreeBuffer() {
   for (size_t b_i = 0; b_i < allocated_blocks.size(); ++b_i) {
     if (allocated_blocks[b_i] != nullptr) {
+      const auto free_size = node_n_per_block * node_size;
+      assert(_::allocated_bytes >= free_size);
+      _::allocated_bytes -= free_size;
       std::free(allocated_blocks[b_i]);
       allocated_blocks[b_i] = nullptr;
     }
   }
+
+  // account for std::vector auto memory management
+  const auto free_size =
+      allocated_blocks.capacity() *
+      sizeof(typename decltype(allocated_blocks)::value_type);
+  assert(_::allocated_bytes >= free_size);
+  _::allocated_bytes -= free_size;
 }
 
 template <class key_t, class val_t>
@@ -523,8 +535,12 @@ void AltBtreeBuffer<key_t, val_t>::split_n_insert_leaf(const key_t& insert_key,
 
 template <class key_t, class val_t>
 inline void AltBtreeBuffer<key_t, val_t>::allocate_new_block() {
-  uint8_t* p = (uint8_t*)std::malloc(node_n_per_block * node_size);
+  const auto malloc_size = node_n_per_block * node_size;
+  uint8_t* p = (uint8_t*)std::malloc(malloc_size);
+  _::allocated_bytes += malloc_size;
+
   allocated_blocks.push_back(p);
+  _::allocated_bytes += sizeof(typename decltype(allocated_blocks)::value_type);
 }
 
 template <class key_t, class val_t>
@@ -542,6 +558,7 @@ AltBtreeBuffer<key_t, val_t>::allocate_internal() {
   internal_t* node_ptr = (internal_t*)allocate_node();
   alloc_mut.unlock();
   new (node_ptr) internal_t();
+
   return node_ptr;
 }
 
@@ -552,6 +569,7 @@ AltBtreeBuffer<key_t, val_t>::allocate_leaf() {
   leaf_t* node_ptr = (leaf_t*)allocate_node();
   alloc_mut.unlock();
   new (node_ptr) leaf_t();
+
   return node_ptr;
 }
 

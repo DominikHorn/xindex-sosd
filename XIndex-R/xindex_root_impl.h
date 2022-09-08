@@ -21,17 +21,21 @@
  */
 #include <unordered_map>
 
+#include "globals.h"
 #include "xindex_root.h"
 
 #if !defined(XINDEX_ROOT_IMPL_H)
 #define XINDEX_ROOT_IMPL_H
 
 namespace xindex {
-
 template <class key_t, class val_t, bool seq>
 Root<key_t, val_t, seq>::~Root() {
   // free models
   if (rmi_2nd_stage != nullptr) {
+    const size_t delete_size =
+        rmi_2nd_stage_model_n * sizeof(decltype(*rmi_2nd_stage));
+    assert(_::allocated_bytes > delete_size);
+    _::allocated_bytes -= delete_size;
     delete[] rmi_2nd_stage;
     rmi_2nd_stage = nullptr;
   }
@@ -40,8 +44,12 @@ Root<key_t, val_t, seq>::~Root() {
   if (groups != nullptr) {
     for (size_t i = 0; i < group_n; i++) {
       const auto& pair = groups[i];
-      if (pair.second != nullptr)
+      if (pair.second != nullptr) {
+        const size_t delete_size = sizeof(decltype(*pair.second));
+        assert(_::allocated_bytes > delete_size);
+        _::allocated_bytes -= delete_size;
         delete pair.second;
+      }
     }
     groups = nullptr;
   }
@@ -125,7 +133,9 @@ void Root<key_t, val_t, seq>::init(const std::vector<key_t>& keys,
 
   // use the found group_n_trial to initialize groups
   group_n = group_n_trial;
-  groups = std::make_unique<std::pair<key_t, group_t* volatile>[]>(group_n);
+  groups = std::make_unique<group_pair_t[]>(group_n);
+  _::allocated_bytes += group_n * sizeof(group_pair_t);
+
   size_t records_per_group = record_n / group_n;
   size_t trailing_record_n = record_n - records_per_group * group_n;
   size_t previous_end_i = 0;
@@ -143,6 +153,8 @@ void Root<key_t, val_t, seq>::init(const std::vector<key_t>& keys,
 
     groups[group_i].first = keys[begin_i];
     groups[group_i].second = new group_t();
+    _::allocated_bytes += sizeof(group_t);
+
     groups[group_i].second->init(keys.begin() + begin_i, vals.begin() + begin_i,
                                  end_i - begin_i);
   }
@@ -323,6 +335,9 @@ void* Root<key_t, val_t, seq>::do_adjustment(void* args) {
                   (*group)->enable_seq_insert_opt();
                 }
                 m_split++;
+                size_t delete_size = sizeof(decltype(*old_group));
+                assert(_::allocated_bytes > delete_size);
+                _::allocated_bytes -= delete_size;
                 delete old_group;
               } else {
                 should_split_group = true;
@@ -340,6 +355,10 @@ void* Root<key_t, val_t, seq>::do_adjustment(void* args) {
                   (*group)->enable_seq_insert_opt();
                 }
                 m_merge++;
+
+                const size_t bytes_to_delete = sizeof(decltype(*old_group));
+                assert(_::allocated_bytes > bytes_to_delete);
+                _::allocated_bytes -= bytes_to_delete;
                 delete old_group;
               } else {
                 might_merge_group = true;
@@ -383,6 +402,13 @@ void* Root<key_t, val_t, seq>::do_adjustment(void* args) {
             rcu_barrier();  // make sure no one is accessing the old data
             old_group->free_data();  // intermidiates share the array and buffer
             old_group->free_buffer();  // so no free_xxx is needed
+
+            const size_t bytes_to_delete =
+                sizeof(decltype(*old_group)) +
+                sizeof(decltype(*intermediate->next)) +
+                sizeof(decltype(*intermediate));
+            assert(_::allocated_bytes > bytes_to_delete);
+            _::allocated_bytes -= bytes_to_delete;
             delete old_group;
             delete intermediate->next;  // but deleting the metadata is needed
             delete intermediate;
@@ -420,6 +446,11 @@ void* Root<key_t, val_t, seq>::do_adjustment(void* args) {
             old_group->free_buffer();
             old_next->free_data();
             old_next->free_buffer();
+
+            const size_t bytes_to_delete =
+                sizeof(decltype(*old_group)) + sizeof(decltype(*old_next));
+            assert(_::allocated_bytes > bytes_to_delete);
+            _::allocated_bytes -= bytes_to_delete;
             delete old_group;
             delete old_next;
             should_update_array = true;
@@ -437,6 +468,10 @@ void* Root<key_t, val_t, seq>::do_adjustment(void* args) {
             rcu_barrier();  // make sure no one is accessing the old data
             old_group->free_data();
             old_group->free_buffer();
+
+            const size_t bytes_to_delete = sizeof(decltype(*old_group));
+            assert(_::allocated_bytes > bytes_to_delete);
+            _::allocated_bytes -= bytes_to_delete;
             delete old_group;
           }
 
@@ -463,6 +498,7 @@ void* Root<key_t, val_t, seq>::do_adjustment(void* args) {
 template <class key_t, class val_t, bool seq>
 Root<key_t, val_t, seq>* Root<key_t, val_t, seq>::create_new_root() {
   Root* new_root = new Root();
+  _::allocated_bytes += sizeof(Root);
 
   size_t new_group_n = 0;
   for (size_t group_i = 0; group_i < group_n; group_i++) {
@@ -476,8 +512,8 @@ Root<key_t, val_t, seq>* Root<key_t, val_t, seq>::create_new_root() {
   DEBUG_THIS("--- [root] update root array. old_group_n="
              << group_n << ", new_group_n=" << new_group_n);
   new_root->group_n = new_group_n;
-  new_root->groups = std::make_unique<std::pair<key_t, group_t* volatile>[]>(
-      new_root->group_n);
+  new_root->groups = std::make_unique<group_pair_t[]>(new_root->group_n);
+  _::allocated_bytes += sizeof(group_pair_t) * new_root->group_n;
 
   size_t new_group_i = 0;
   for (size_t group_i = 0; group_i < group_n; group_i++) {
@@ -497,7 +533,6 @@ Root<key_t, val_t, seq>* Root<key_t, val_t, seq>::create_new_root() {
 
   new_root->rmi_1st_stage = rmi_1st_stage;
   new_root->rmi_2nd_stage = rmi_2nd_stage;
-  new_root->rmi_2nd_stage_model_n = rmi_2nd_stage_model_n;
   new_root->adjust_rmi();
 
   return new_root;
@@ -582,9 +617,16 @@ void Root<key_t, val_t, seq>::adjust_rmi() {
 
 template <class key_t, class val_t, bool seq>
 inline void Root<key_t, val_t, seq>::train_rmi(size_t rmi_2nd_stage_model_n) {
+  using model_t = linear_model_t;
+
+  const size_t bytes_to_delete = this->rmi_2nd_stage_model_n * sizeof(model_t);
+  assert(_::allocated_bytes > bytes_to_delete);
+  _::allocated_bytes -= bytes_to_delete;
   this->rmi_2nd_stage_model_n = rmi_2nd_stage_model_n;
   delete[] rmi_2nd_stage;
-  rmi_2nd_stage = new linear_model_t[rmi_2nd_stage_model_n]();
+
+  rmi_2nd_stage = new model_t[rmi_2nd_stage_model_n]();
+  _::allocated_bytes += rmi_2nd_stage_model_n * sizeof(model_t);
 
   // train 1st stage
   std::vector<key_t> keys(group_n);

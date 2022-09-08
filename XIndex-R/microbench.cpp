@@ -42,13 +42,13 @@ typedef FGParam fg_param_t;
 typedef Key index_key_t;
 typedef xindex::XIndex<index_key_t, uint64_t> xindex_t;
 
-inline void prepare_xindex(xindex_t *&table);
+inline void prepare_xindex(xindex_t*& table);
 
-void run_benchmark(xindex_t *table, size_t sec);
+void run_benchmark(xindex_t* table, size_t sec);
 
-void *run_fg(void *param);
+void* run_fg(void* param);
 
-inline void parse_args(int, char **);
+inline void parse_args(int, char**);
 
 // parameters
 double read_ratio = 1;
@@ -67,7 +67,7 @@ std::vector<index_key_t> exist_keys;
 std::vector<index_key_t> non_exist_keys;
 
 struct alignas(CACHELINE_SIZE) FGParam {
-  xindex_t *table;
+  xindex_t* table;
   uint64_t throughput;
   uint32_t thread_id;
 };
@@ -88,8 +88,8 @@ class Key {
 
   Key() : key(0) {}
   Key(uint64_t key) : key(key) {}
-  Key(const Key &other) { key = other.key; }
-  Key &operator=(const Key &other) {
+  Key(const Key& other) { key = other.key; }
+  Key& operator=(const Key& other) {
     key = other.key;
     return *this;
   }
@@ -100,25 +100,26 @@ class Key {
     return model_key;
   }
 
-  friend bool operator<(const Key &l, const Key &r) { return l.key < r.key; }
-  friend bool operator>(const Key &l, const Key &r) { return l.key > r.key; }
-  friend bool operator>=(const Key &l, const Key &r) { return l.key >= r.key; }
-  friend bool operator<=(const Key &l, const Key &r) { return l.key <= r.key; }
-  friend bool operator==(const Key &l, const Key &r) { return l.key == r.key; }
-  friend bool operator!=(const Key &l, const Key &r) { return l.key != r.key; }
+  friend bool operator<(const Key& l, const Key& r) { return l.key < r.key; }
+  friend bool operator>(const Key& l, const Key& r) { return l.key > r.key; }
+  friend bool operator>=(const Key& l, const Key& r) { return l.key >= r.key; }
+  friend bool operator<=(const Key& l, const Key& r) { return l.key <= r.key; }
+  friend bool operator==(const Key& l, const Key& r) { return l.key == r.key; }
+  friend bool operator!=(const Key& l, const Key& r) { return l.key != r.key; }
 
   uint64_t key;
 } PACKED;
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   parse_args(argc, argv);
-  xindex_t *tab_xi;
+  xindex_t* tab_xi;
   prepare_xindex(tab_xi);
   run_benchmark(tab_xi, runtime);
-  if (tab_xi != nullptr) delete tab_xi;
+  if (tab_xi != nullptr)
+    delete tab_xi;
 }
 
-inline void prepare_xindex(xindex_t *&table) {
+inline void prepare_xindex(xindex_t*& table) {
   // prepare data
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -146,10 +147,10 @@ inline void prepare_xindex(xindex_t *&table) {
   table = new xindex_t(exist_keys, vals, fg_n, bg_n);
 }
 
-void *run_fg(void *param) {
-  fg_param_t &thread_param = *(fg_param_t *)param;
+void* run_fg(void* param) {
+  fg_param_t& thread_param = *(fg_param_t*)param;
   uint32_t thread_id = thread_param.thread_id;
-  xindex_t *table = thread_param.table;
+  xindex_t* table = thread_param.table;
 
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -224,7 +225,7 @@ void *run_fg(void *param) {
   pthread_exit(nullptr);
 }
 
-void run_benchmark(xindex_t *table, size_t sec) {
+void run_benchmark(xindex_t* table, size_t sec) {
   pthread_t threads[fg_n];
   fg_param_t fg_params[fg_n];
   // check if parameters are cacheline aligned
@@ -240,14 +241,15 @@ void run_benchmark(xindex_t *table, size_t sec) {
     fg_params[worker_i].thread_id = worker_i;
     fg_params[worker_i].throughput = 0;
     int ret = pthread_create(&threads[worker_i], nullptr, run_fg,
-                             (void *)&fg_params[worker_i]);
+                             (void*)&fg_params[worker_i]);
     if (ret) {
       COUT_N_EXIT("Error:" << ret);
     }
   }
 
   COUT_THIS("[micro] prepare data ...");
-  while (ready_threads < fg_n) sleep(1);
+  while (ready_threads < fg_n)
+    sleep(1);
 
   running = true;
   std::vector<size_t> tput_history(fg_n, 0);
@@ -264,7 +266,7 @@ void run_benchmark(xindex_t *table, size_t sec) {
   }
 
   running = false;
-  void *status;
+  void* status;
   for (size_t i = 0; i < fg_n; i++) {
     int rc = pthread_join(threads[i], &status);
     if (rc) {
@@ -273,13 +275,13 @@ void run_benchmark(xindex_t *table, size_t sec) {
   }
 
   size_t throughput = 0;
-  for (auto &p : fg_params) {
+  for (auto& p : fg_params) {
     throughput += p.throughput;
   }
   COUT_THIS("[micro] Throughput(op/s): " << throughput / sec);
 }
 
-inline void parse_args(int argc, char **argv) {
+inline void parse_args(int argc, char** argv) {
   struct option long_options[] = {
       {"read", required_argument, 0, 'a'},
       {"insert", required_argument, 0, 'b'},
@@ -302,11 +304,13 @@ inline void parse_args(int argc, char **argv) {
 
   while (1) {
     int c = getopt_long(argc, argv, ops.c_str(), long_options, &option_index);
-    if (c == -1) break;
+    if (c == -1)
+      break;
 
     switch (c) {
       case 0:
-        if (long_options[option_index].flag != 0) break;
+        if (long_options[option_index].flag != 0)
+          break;
         abort();
         break;
       case 'a':
