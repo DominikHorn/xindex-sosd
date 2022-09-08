@@ -61,12 +61,15 @@ XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t>& keys,
   _::allocated_bytes += sizeof(root_t);
 
   root->init(keys, vals);
-  start_bg();
+
+  // for our measurements, we want to manually force merging etc -> no background thread
+  // start_bg();
 }
 
 template <class key_t, class val_t, bool seq>
 XIndex<key_t, val_t, seq>::~XIndex() {
-  terminate_bg();
+  // for our measurements, we want to manually force merging etc -> no background thread
+  // terminate_bg();
 
   if (root != nullptr) {
     // track dealloc
@@ -260,6 +263,40 @@ size_t XIndex<key_t, val_t, seq>::byte_size() const {
 
   return total_size;
 }
+template <class key_t, class val_t, bool seq>
+void XIndex<key_t, val_t, seq>::force_adjustment_sync() {
+  if (root == nullptr)
+    return;
+
+  bool should_update_array = false;
+  root->force_adjustment_sync(should_update_array);
+
+  if (should_update_array) {
+    root_t* old_root = this->root;
+    this->root = old_root->create_new_root();
+    this->root->trim_root();
+
+    const size_t bytes_to_delete = sizeof(decltype(*old_root));
+    assert(_::allocated_bytes > bytes_to_delete);
+    _::allocated_bytes -= bytes_to_delete;
+    delete old_root;
+
+    double avg_group_error = 0, max_group_error = 0;
+    for (size_t group_i = 0; group_i < this->root->group_n; group_i++) {
+      avg_group_error += this->root->groups[group_i].second->mean_error;
+      if (this->root->groups[group_i].second->mean_error > max_group_error) {
+        max_group_error = this->root->groups[group_i].second->mean_error;
+      }
+    }
+    avg_group_error /= this->root->group_n;
+    DEBUG_THIS("--- [root] group_n: " << this->root->group_n);
+    DEBUG_THIS("--- [root] rmi_2nd_stage_model_n: "
+               << this->root->rmi_2nd_stage_model_n);
+    DEBUG_THIS("--- [root] avg_group_error: " << avg_group_error);
+    DEBUG_THIS("--- [root] max_group_error: " << max_group_error);
+  }
+}
+
 }  // namespace xindex
 
 #endif  // XINDEX_IMPL_H

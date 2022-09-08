@@ -145,6 +145,8 @@ inline void prepare_xindex(xindex_t*& table) {
   std::sort(exist_keys.begin(), exist_keys.end());
   std::vector<uint64_t> vals(exist_keys.size(), 1);
   table = new xindex_t(exist_keys, vals, fg_n, bg_n);
+
+  table->force_adjustment_sync();
 }
 
 void* run_fg(void* param) {

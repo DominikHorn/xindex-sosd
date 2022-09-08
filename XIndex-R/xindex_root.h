@@ -57,6 +57,9 @@ class Root {
   Root* create_new_root();
   void trim_root();
 
+  /// synchronously forces merging of all delta buffers
+  void force_adjustment_sync(bool& should_update_array);
+
   /// computes the in memory size in bytes
   size_t byte_size() const;
 

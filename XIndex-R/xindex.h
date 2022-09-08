@@ -54,6 +54,9 @@ class XIndex {
                     std::vector<std::pair<key_t, val_t>>& result,
                     const uint32_t worker_id);
 
+  /// synchronously forces merging of all delta buffers
+  void force_adjustment_sync();
+
   /// computes the in memory size of the index in bytes
   size_t byte_size() const;
 

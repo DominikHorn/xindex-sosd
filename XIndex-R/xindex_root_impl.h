@@ -277,6 +277,151 @@ inline size_t Root<key_t, val_t, seq>::range_scan(
 }
 
 template <class key_t, class val_t, bool seq>
+void Root<key_t, val_t, seq>::force_adjustment_sync(bool& should_update_array) {
+  // iterate through the array, and do maintenance
+  size_t m_split = 0, g_split = 0, m_merge = 0, g_merge = 0, compact = 0;
+  size_t buf_size = 0, cnt = 0;
+  for (size_t group_i = 0; group_i < this->group_n; group_i++) {
+    group_t* volatile* group = &(this->groups[group_i].second);
+    while (*group != nullptr) {
+      // check model split/merge
+      bool should_split_group = false;
+      bool might_merge_group = false;
+
+      // set this to avoid ping-pong effect
+      size_t max_trial_n = max_model_n;
+      for (size_t trial_i = 0; trial_i < max_trial_n; ++trial_i) {
+        group_t* old_group = (*group);
+
+        double mean_error;
+        if (seq) {
+          mean_error = old_group->mean_error_est();
+        } else {
+          mean_error = old_group->mean_error;
+        }
+
+        uint16_t model_n = old_group->model_n;
+        if (mean_error > config.group_error_bound) {
+          if (model_n != max_model_n) {
+            *group = old_group->split_model();
+            if (seq) {
+              (*group)->enable_seq_insert_opt();
+            }
+            m_split++;
+            size_t delete_size = sizeof(decltype(*old_group));
+            assert(_::allocated_bytes > delete_size);
+            _::allocated_bytes -= delete_size;
+            delete old_group;
+          } else {
+            should_split_group = true;
+            break;
+          }
+        } else if (mean_error <
+                   config.group_error_bound / config.group_error_tolerance) {
+          if (model_n != 1) {
+            // DEBUG_THIS("------ [model merge] err="
+            //            << mean_error << ", group_i=" << group_i);
+            *group = old_group->merge_model();
+            if (seq) {
+              (*group)->enable_seq_insert_opt();
+            }
+            m_merge++;
+
+            const size_t bytes_to_delete = sizeof(decltype(*old_group));
+            assert(_::allocated_bytes > bytes_to_delete);
+            _::allocated_bytes -= bytes_to_delete;
+            delete old_group;
+          } else {
+            might_merge_group = true;
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+
+      // prepare for group merge
+      group_t* volatile* next_group = nullptr;
+      if ((*group)->next) {
+        next_group = &((*group)->next);
+      } else if (group_i != this->group_n - 1 &&
+                 this->groups[group_i + 1].second) {
+        next_group = &(this->groups[group_i + 1].second);
+      }
+
+      // check for group split/merge, if not, do compaction
+      size_t buffer_size = (*group)->buffer->size();
+      buf_size += buffer_size;
+      cnt++;
+      group_t* old_group = (*group);
+      if (should_split_group || buffer_size > config.buffer_size_bound) {
+        group_t* intermediate = old_group->split_group_pt1();
+        *group = intermediate;  // create 2 new groups with freezed buffer
+        group_t* new_group = intermediate->split_group_pt2();  // now merge
+        *group = new_group;
+        g_split++;
+        new_group->compact_phase_2();
+        new_group->next->compact_phase_2();
+        old_group->free_data();    // intermidiates share the array and buffer
+        old_group->free_buffer();  // so no free_xxx is needed
+
+        const size_t bytes_to_delete = sizeof(decltype(*old_group)) +
+                                       sizeof(decltype(*intermediate->next)) +
+                                       sizeof(decltype(*intermediate));
+        assert(_::allocated_bytes > bytes_to_delete);
+        _::allocated_bytes -= bytes_to_delete;
+        delete old_group;
+        delete intermediate->next;  // but deleting the metadata is needed
+        delete intermediate;
+        should_update_array = true;
+
+        // skip next (the split new one), to avoid ping-pong split / merge
+        group = &((*group)->next);
+      } else if (might_merge_group &&
+                 buffer_size <
+                     config.buffer_size_bound / config.buffer_size_tolerance &&
+                 next_group != nullptr) {
+
+        group_t* old_next = (*next_group);
+        group_t* new_group = old_group->merge_group(*old_next);
+        *group = new_group;
+        *next_group = new_group;  // first set 2 ptrs to a valid one
+        *next_group = nullptr;    // then nullify the next
+        g_merge++;
+        new_group->compact_phase_2();
+        old_group->free_data();
+        old_group->free_buffer();
+        old_next->free_data();
+        old_next->free_buffer();
+
+        const size_t bytes_to_delete =
+            sizeof(decltype(*old_group)) + sizeof(decltype(*old_next));
+        assert(_::allocated_bytes > bytes_to_delete);
+        _::allocated_bytes -= bytes_to_delete;
+        delete old_group;
+        delete old_next;
+        should_update_array = true;
+      } else if (buffer_size > config.buffer_compact_threshold) {
+        group_t* new_group = old_group->compact_phase_1();
+        *group = new_group;
+        compact++;
+        new_group->compact_phase_2();
+        old_group->free_data();
+        old_group->free_buffer();
+
+        const size_t bytes_to_delete = sizeof(decltype(*old_group));
+        assert(_::allocated_bytes > bytes_to_delete);
+        _::allocated_bytes -= bytes_to_delete;
+        delete old_group;
+      }
+
+      // do next (in the chain)
+      group = &((*group)->next);
+    }
+  }
+}
+
+template <class key_t, class val_t, bool seq>
 void* Root<key_t, val_t, seq>::do_adjustment(void* args) {
   volatile bool& should_update_array = ((BGInfo*)args)->should_update_array;
   std::atomic<bool>& started = ((BGInfo*)args)->started;
