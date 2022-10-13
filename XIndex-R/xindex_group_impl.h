@@ -421,8 +421,8 @@ void Group<key_t, val_t, seq, max_model_n>::free_data() {
 
   const size_t bytes_to_delete = sizeof(decltype(*data)) * capacity;
   assert(_::allocated_bytes > bytes_to_delete);
-  _::allocated_bytes -= bytes_to_delete;
-  delete[] data;
+  // _::allocated_bytes -= bytes_to_delete;
+  // delete[] data;
   data = nullptr;
 }
 template <class key_t, class val_t, bool seq, size_t max_model_n>
@@ -432,8 +432,10 @@ void Group<key_t, val_t, seq, max_model_n>::free_buffer() {
 
   const size_t bytes_to_delete = sizeof(decltype(*buffer));
   assert(_::allocated_bytes >= bytes_to_delete);
-  _::allocated_bytes -= bytes_to_delete;
-  delete buffer;
+  // We can not delete the buffer here because someone else might still be using it.
+  // A fix might involve rewriting with shared_ptr but is to costly (development time) for now.
+  // _::allocated_bytes -= bytes_to_delete;
+  // delete buffer;
   buffer = nullptr;
 }
 
