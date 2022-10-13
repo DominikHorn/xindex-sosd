@@ -51,9 +51,8 @@ XIndex<key_t, val_t, seq>::XIndex(const std::vector<key_t>& keys,
   INVARIANT(config.buffer_compact_threshold > 0);
   INVARIANT(config.worker_n > 0);
 
-  for (size_t key_i = 1; key_i < keys.size(); key_i++) {
-    assert(keys[key_i] >= keys[key_i - 1]);
-  }
+  assert(std::is_sorted(keys.begin(), keys.end()));
+
   rcu_init();
 
   // malloc memory for root & init root
@@ -252,10 +251,11 @@ void XIndex<key_t, val_t, seq>::terminate_bg() {
 }
 
 template <class key_t, class val_t, bool seq>
-size_t XIndex<key_t, val_t, seq>::byte_size() const {
+_::ByteSize XIndex<key_t, val_t, seq>::byte_size() const {
   // Metdata size like root pointer. This is not entirely accurate since the bg_master thread metadata is not fully accounted for.
   // However, this constant overhead is insignificant compared to actual data size (accounted for below)
-  size_t total_size = sizeof(decltype(*this));
+  const auto size = sizeof(decltype(*this));
+  _::ByteSize total_size = {.allocated = size, .used = size};
 
   // recursively count size of nodes
   if (root != nullptr)

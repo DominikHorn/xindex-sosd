@@ -20,6 +20,7 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
+#include "byte_size.hpp"
 #include "xindex_util.h"
 
 #if !defined(xindex_buffer_H)
@@ -56,7 +57,7 @@ class AltBtreeBuffer {
     void copy_keys(int begin, key_t* dst);
 
     /// computes the in memory size in bytes
-    virtual size_t byte_size() const = 0;
+    virtual _::ByteSize byte_size() const = 0;
 
    public:
     bool is_leaf;
@@ -84,7 +85,7 @@ class AltBtreeBuffer {
     void copy_children(int begin, Node** dst);
 
     /// computes the in memory size in bytes
-    virtual size_t byte_size() const;
+    virtual _::ByteSize byte_size() const;
 
    public:
     Node* children[alt_buf_fanout];
@@ -106,7 +107,7 @@ class AltBtreeBuffer {
     void copy_vals(int begin, atomic_val_t* dst);
 
     /// computes the in memory size in bytes
-    virtual size_t byte_size() const;
+    virtual _::ByteSize byte_size() const;
 
    public:
     atomic_val_t vals[node_capacity];
@@ -157,7 +158,7 @@ class AltBtreeBuffer {
   inline uint32_t size();
 
   /// computes the in memory size in bytes
-  size_t byte_size() const;
+  _::ByteSize byte_size() const;
 
  private:
   leaf_t* locate_leaf(key_t key, uint64_t& version);

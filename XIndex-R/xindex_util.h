@@ -33,7 +33,8 @@ namespace xindex {
 
 static const size_t desired_training_key_n = 10000000;
 static const size_t max_model_n = 4;
-static const size_t seq_insert_reserve_factor = 2;
+static const size_t seq_insert_reserve_factor =
+    1;  // we don't insert in SOSD, hence we don't need the sequential insert optimization
 
 struct alignas(CACHELINE_SIZE) RCUStatus;
 enum class Result;

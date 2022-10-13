@@ -20,6 +20,7 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
+#include "byte_size.hpp"
 #include "xindex_group.h"
 
 #if !defined(XINDEX_ROOT_H)
@@ -61,7 +62,7 @@ class Root {
   void force_adjustment_sync(bool& should_update_array);
 
   /// computes the in memory size in bytes
-  size_t byte_size() const;
+  _::ByteSize byte_size() const;
 
  private:
   void adjust_rmi();

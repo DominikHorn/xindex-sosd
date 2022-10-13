@@ -913,7 +913,7 @@ Root<key_t, val_t, seq>::locate_group_pt2(const key_t& key, group_t* begin) {
 }
 
 template <class key_t, class val_t, bool seq>
-size_t Root<key_t, val_t, seq>::byte_size() const {
+ _::ByteSize Root<key_t, val_t, seq>::byte_size() const {
   // statically counting byte size in this way relies on some assuptions
   static_assert(
       !std::is_same<decltype(rmi_1st_stage),
@@ -929,14 +929,16 @@ size_t Root<key_t, val_t, seq>::byte_size() const {
 
   assert(groups != nullptr);
 
-  size_t group_size_total = 0;
+  _::ByteSize group_size_total;
   for (size_t i = 0; i < group_n; i++) {
     const auto& group_pair = groups.get()[i];
     if (group_pair.second != nullptr)
       group_size_total += group_pair.second->byte_size();
   }
 
-  return metadata_size + root_model_size + group_size_total;
+  return {
+      .allocated = metadata_size + root_model_size + group_size_total.allocated,
+      .used = metadata_size + root_model_size + group_size_total.used};
 }
 
 }  // namespace xindex

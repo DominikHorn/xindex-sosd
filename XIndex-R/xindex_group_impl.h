@@ -1212,7 +1212,7 @@ Group<key_t, val_t, seq, max_model_n>::ArrayRefSource::get_val() {
 }
 
 template <class key_t, class val_t, bool seq, size_t max_model_n>
-size_t Group<key_t, val_t, seq, max_model_n>::byte_size() const {
+_::ByteSize Group<key_t, val_t, seq, max_model_n>::byte_size() const {
   // purposefully exclude model size to make it explicit
   const size_t metadata_size =
       sizeof(decltype(*this)) - sizeof(decltype(models));
@@ -1226,12 +1226,16 @@ size_t Group<key_t, val_t, seq, max_model_n>::byte_size() const {
       this->capacity * (sizeof(typename record_t::first_type) +
                         record_t::second_type::byte_size());
 
-  const size_t delta_buffer_size = buffer != nullptr ? buffer->byte_size() : 0;
-  const size_t temp_buffer_size =
-      buffer_temp != nullptr ? buffer_temp->byte_size() : 0;
+  const _::ByteSize delta_buffer_size =
+      buffer != nullptr ? buffer->byte_size() : _::ByteSize();
+  const _::ByteSize temp_buffer_size =
+      buffer_temp != nullptr ? buffer_temp->byte_size() : _::ByteSize();
 
-  return metadata_size + models_size + data_size + delta_buffer_size +
-         temp_buffer_size;
+  // According to the author, this seems to not have an overcounting issue
+  return {.allocated = metadata_size + models_size + data_size +
+                       delta_buffer_size.allocated + temp_buffer_size.allocated,
+          .used = metadata_size + models_size + data_size +
+                  delta_buffer_size.used + temp_buffer_size.used};
 }
 
 }  // namespace xindex

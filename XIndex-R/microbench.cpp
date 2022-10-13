@@ -147,6 +147,9 @@ inline void prepare_xindex(xindex_t*& table) {
   table = new xindex_t(exist_keys, vals, fg_n, bg_n);
 
   table->force_adjustment_sync();
+
+  std::cout << (table->byte_size().allocated) << ", "
+            << (table->byte_size().used) << std::endl;
 }
 
 void* run_fg(void* param) {

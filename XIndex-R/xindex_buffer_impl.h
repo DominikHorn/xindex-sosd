@@ -24,6 +24,7 @@
 #include <mutex>
 #include <vector>
 
+#include "byte_size.hpp"
 #include "globals.h"
 #include "xindex_buffer.h"
 
@@ -872,38 +873,43 @@ AltBtreeBuffer<key_t, val_t>::RefSource::get_val() {
 }
 
 template <class key_t, class val_t>
-size_t AltBtreeBuffer<key_t, val_t>::byte_size() const {
+_::ByteSize AltBtreeBuffer<key_t, val_t>::byte_size() const {
   const size_t metadata_size = sizeof(decltype(*this));
   const size_t allocated_blocks_size =
       allocated_blocks.size() * (node_n_per_block * node_size);
-  const size_t tree_size = root != nullptr ? root->byte_size() : 0;
+  const _::ByteSize tree_size =
+      root != nullptr ? root->byte_size() : _::ByteSize();
 
-  return metadata_size + allocated_blocks_size + tree_size;
+  return {.allocated = metadata_size + allocated_blocks_size,
+          .used = metadata_size + tree_size.used};
 }
 
 template <class key_t, class val_t>
-size_t AltBtreeBuffer<key_t, val_t>::Internal::byte_size() const {
+_::ByteSize AltBtreeBuffer<key_t, val_t>::Internal::byte_size() const {
   const size_t metadata_size = sizeof(decltype(*this));
 
-  size_t total_child_size = 0;
+  _::ByteSize total_child_size;
   for (size_t i = 0; i < alt_buf_fanout; i++) {
     const auto& child = children[i];
-    if (child != nullptr)
+    if (child != nullptr) {
       total_child_size += child->byte_size();
+    }
   }
 
-  return metadata_size + total_child_size;
+  return {.allocated = metadata_size + total_child_size.allocated,
+          .used = metadata_size + total_child_size.used};
 }
 
 template <class key_t, class val_t>
-size_t AltBtreeBuffer<key_t, val_t>::Leaf::byte_size() const {
+_::ByteSize AltBtreeBuffer<key_t, val_t>::Leaf::byte_size() const {
   // make vals size explicit
   const size_t metadata_size = sizeof(decltype(*this)) - sizeof(vals);
 
-  // equivalent to sizeof(vals) for simple atomic_val_t otherwise larger
+  // equivalent to sizeof(wwvals) for simple atomic_val_t otherwise larger
   const size_t vals_size = node_capacity * atomic_val_t::byte_size();
 
-  return metadata_size + vals_size;
+  const auto size = metadata_size + vals_size;
+  return {.allocated = size, .used = size};
 }
 
 }  // namespace xindex

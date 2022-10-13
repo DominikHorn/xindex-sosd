@@ -20,6 +20,7 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
+#include "byte_size.hpp"
 #include "xindex_buffer.h"
 #include "xindex_model.h"
 #include "xindex_util.h"
@@ -114,7 +115,7 @@ class alignas(CACHELINE_SIZE) Group {
   void free_buffer_temp();
 
   /// computes the in memory size in bytes
-  size_t byte_size() const;
+  _::ByteSize byte_size() const;
 
  private:
   inline size_t locate_model(const key_t& key);

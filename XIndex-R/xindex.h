@@ -20,6 +20,7 @@
  *     https://ppopp20.sigplan.org/details/PPoPP-2020-papers/13/XIndex-A-Scalable-Learned-Index-for-Multicore-Data-Storage
  */
 
+#include "byte_size.hpp"
 #include "globals.h"
 #include "helper.h"
 #include "xindex_buffer.h"
@@ -58,7 +59,7 @@ class XIndex {
   void force_adjustment_sync();
 
   /// computes the in memory size of the index in bytes
-  size_t byte_size() const;
+  _::ByteSize byte_size() const;
 
  private:
   void start_bg();
